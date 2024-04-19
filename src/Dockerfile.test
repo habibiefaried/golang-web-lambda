@@ -11,7 +11,7 @@ ADD https://github.com/aws/aws-lambda-runtime-interface-emulator/releases/latest
 RUN chmod 755 /usr/local/bin/aws-lambda-rie
 WORKDIR /root/
 COPY --from=builder /app/main .
-RUN chmod +x /root/main
+RUN chmod +x ./main
 
-CMD ["/root/main"]
+CMD ["./main"]
 ENTRYPOINT [ "/usr/local/bin/aws-lambda-rie" ]

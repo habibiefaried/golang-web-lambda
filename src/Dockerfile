@@ -1,4 +1,5 @@
-FROM golang:1.22 as builder
+FROM golang:1.22-alpine as builder
+RUN apk add --no-cache gcc musl-dev
 WORKDIR /app
 COPY . .
 RUN go mod download
