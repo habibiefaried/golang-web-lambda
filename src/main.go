@@ -20,7 +20,7 @@ func init() {
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 
-	e.GET("/ping", func(c echo.Context) error {
+	e.GET("/echo", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, Response{From: "echo", Message: time.Now().Format(time.UnixDate)})
 	})
 
