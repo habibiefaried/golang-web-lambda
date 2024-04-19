@@ -1,39 +1,35 @@
 package main
 
 import (
-    "context"
-    "github.com/aws/aws-lambda-go/events"
-    "github.com/aws/aws-lambda-go/lambda"
-    "net/http"
-    "strings"
+	"context"
+	"log"
+
+	"github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/awslabs/aws-lambda-go-api-proxy/gin"
+	"github.com/gin-gonic/gin"
 )
 
-func handleRequest(ctx context.Context, request events.APIGatewayV2HTTPRequest) (events.APIGatewayProxyResponse, error) {
-    // Normalize path
-    path := strings.Trim(request.RawPath, "/")
+var ginLambda *ginadapter.GinLambda
 
-    // Default response for "/"
-    if path == "" {
-        return events.APIGatewayProxyResponse{
-            StatusCode: http.StatusOK,
-            Body:       "Hello from Root!",
-        }, nil
-    }
+func init() {
+	// stdout and stderr are sent to AWS CloudWatch Logs
+	log.Printf("Gin cold start")
+	r := gin.Default()
+	r.GET("/ping", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"message": "pong",
+		})
+	})
 
-    switch path {
-    case "test":
-        return events.APIGatewayProxyResponse{
-            StatusCode: http.StatusOK,
-            Body:       "Hello from Test!",
-        }, nil
-    default:
-        return events.APIGatewayProxyResponse{
-            StatusCode: http.StatusNotFound,
-            Body:       "Not Found",
-        }, nil
-    }
+	ginLambda = ginadapter.New(r)
+}
+
+func Handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	// If no name is provided in the HTTP request body, throw an error
+	return ginLambda.ProxyWithContext(ctx, req)
 }
 
 func main() {
-    lambda.Start(handleRequest)
+	lambda.Start(Handler)
 }
