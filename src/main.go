@@ -1,45 +1,39 @@
 package main
 
 import (
-	"context"
-	"net/http"
-	"time"
-
-	"github.com/aws/aws-lambda-go/events"
-	"github.com/aws/aws-lambda-go/lambda"
-	echoadapter "github.com/awslabs/aws-lambda-go-api-proxy/echo"
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
+    "context"
+    "github.com/aws/aws-lambda-go/events"
+    "github.com/aws/aws-lambda-go/lambda"
+    "net/http"
+    "strings"
 )
 
-var echoLambda *echoadapter.EchoLambda
+func handleRequest(ctx context.Context, request events.APIGatewayV2HTTPRequest) (events.APIGatewayProxyResponse, error) {
+    // Normalize path
+    path := strings.Trim(request.RawPath, "/")
 
-func init() {
-	e := echo.New()
+    // Default response for "/"
+    if path == "" {
+        return events.APIGatewayProxyResponse{
+            StatusCode: http.StatusOK,
+            Body:       "Hello from Root!",
+        }, nil
+    }
 
-	e.Use(middleware.Logger())
-	e.Use(middleware.Recover())
-
-	e.GET("/", func(c echo.Context) error {
-		return c.JSON(http.StatusOK, Response{From: "mainpage", Message: time.Now().Format(time.UnixDate)})
-	})
-
-	e.POST("/test", func(c echo.Context) error {
-		return c.JSON(http.StatusOK, Response{From: "posttest", Message: time.Now().Format(time.UnixDate)})
-	})
-
-	echoLambda = echoadapter.New(e)
-}
-
-func Handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	return echoLambda.ProxyWithContext(ctx, req)
+    switch path {
+    case "test":
+        return events.APIGatewayProxyResponse{
+            StatusCode: http.StatusOK,
+            Body:       "Hello from Test!",
+        }, nil
+    default:
+        return events.APIGatewayProxyResponse{
+            StatusCode: http.StatusNotFound,
+            Body:       "Not Found",
+        }, nil
+    }
 }
 
 func main() {
-	lambda.Start(Handler)
-}
-
-type Response struct {
-	From    string `json:"from"`
-	Message string `json:"message"`
+    lambda.Start(handleRequest)
 }
