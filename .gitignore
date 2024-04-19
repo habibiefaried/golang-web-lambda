@@ -19,3 +19,4 @@ go.work
 .terraform
 terraform.tfstate
 terraform.tfstate.backup
+golang-web-lambda

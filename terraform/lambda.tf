@@ -8,7 +8,7 @@ module "lambda_function_container_image" {
   create_package             = false
   create_lambda_function_url = true
 
-  image_uri    = "${aws_ecr_repository.web.repository_url}:12"
+  image_uri    = "${aws_ecr_repository.web.repository_url}:13"
   package_type = "Image"
 }
 

@@ -2,34 +2,65 @@ package main
 
 import (
 	"context"
-	"log"
-
+	"encoding/json"
+	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/awslabs/aws-lambda-go-api-proxy/gin"
-	"github.com/gin-gonic/gin"
+	"net/http"
+	"strings"
 )
 
-var ginLambda *ginadapter.GinLambda
-
-func init() {
-	// stdout and stderr are sent to AWS CloudWatch Logs
-	log.Printf("Gin cold start")
-	r := gin.Default()
-	r.GET("/ping", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"message": "pong",
-		})
-	})
-
-	ginLambda = ginadapter.New(r)
+type RequestBody struct {
+	Test string `json:"test"`
 }
 
-func Handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	// If no name is provided in the HTTP request body, throw an error
-	return ginLambda.ProxyWithContext(ctx, req)
+func handleRequest(ctx context.Context, request events.APIGatewayV2HTTPRequest) (events.APIGatewayProxyResponse, error) {
+	// Normalize path
+	path := strings.Trim(request.RawPath, "/")
+
+	// Default response for "/"
+	if path == "" {
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusOK,
+			Body:       "Hello from Root!",
+		}, nil
+	}
+
+	switch path {
+	case "reflect":
+		testValue := request.QueryStringParameters["test"]
+		if testValue == "" {
+			return events.APIGatewayProxyResponse{
+				StatusCode: http.StatusBadRequest, // 400
+				Body:       "Query parameter 'test' is missing",
+			}, nil
+		}
+		responseMessage := "Received 'test' parameter: " + testValue
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusOK,
+			Body:       responseMessage,
+		}, nil
+	case "post":
+		var body RequestBody
+		err := json.Unmarshal([]byte(request.Body), &body)
+		if err != nil {
+			return events.APIGatewayProxyResponse{
+				StatusCode: http.StatusBadRequest,
+				Body:       "Invalid JSON in request body",
+			}, nil
+		}
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusOK,
+			Body:       fmt.Sprintf("POST request received with 'test' value: %s", body.Test),
+		}, nil
+	default:
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusNotFound,
+			Body:       "Not Found",
+		}, nil
+	}
 }
 
 func main() {
-	lambda.Start(Handler)
+	lambda.Start(handleRequest)
 }
