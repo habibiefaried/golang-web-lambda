@@ -1,42 +1,55 @@
-# API Gateway HTTP API to expose the Lambda function
-resource "aws_apigatewayv2_api" "http_api" {
-  name          = "lambda_http_api"
-  protocol_type = "HTTP"
-  description   = "HTTP API for Lambda Function"
+# API Gateway
+resource "aws_api_gateway_rest_api" "my_api" {
+  name        = "MyAPI"
+  description = "API Gateway to trigger Lambda function"
 }
 
-# Integration between API Gateway and Lambda
-resource "aws_apigatewayv2_integration" "lambda_integration" {
-  api_id              = aws_apigatewayv2_api.http_api.id
-  integration_type    = "AWS_PROXY"
-  integration_uri     = aws_lambda_function.web.invoke_arn
-  integration_method  = "POST"
-  payload_format_version = "2.0"
+resource "aws_api_gateway_resource" "api_proxy_resource" {
+  rest_api_id = aws_api_gateway_rest_api.my_api.id
+  parent_id   = aws_api_gateway_rest_api.my_api.root_resource_id
+  path_part   = "{proxy+}"
 }
 
-# Default route to invoke the Lambda function
-resource "aws_apigatewayv2_route" "default_route" {
-  api_id    = aws_apigatewayv2_api.http_api.id
-  route_key = "ANY /"
-  target    = format("integrations/%s", aws_apigatewayv2_integration.lambda_integration.id)
+resource "aws_api_gateway_method" "proxy_method" {
+  rest_api_id   = aws_api_gateway_rest_api.my_api.id
+  resource_id   = aws_api_gateway_resource.api_proxy_resource.id
+  http_method   = "ANY"
+  authorization = "NONE"
 }
 
-# Deploy the API and make it accessible
-resource "aws_apigatewayv2_stage" "default_stage" {
-  api_id     = aws_apigatewayv2_api.http_api.id
-  name       = "$default"
-  auto_deploy = true
+resource "aws_api_gateway_integration" "lambda_proxy_integration" {
+  rest_api_id = aws_api_gateway_rest_api.my_api.id
+  resource_id = aws_api_gateway_resource.api_proxy_resource.id
+  http_method = aws_api_gateway_method.proxy_method.http_method
+  type        = "AWS_PROXY"
+  integration_http_method = "POST"
+  uri         = aws_lambda_function.web.invoke_arn
 }
 
-# Permission for API Gateway to invoke the Lambda function
-resource "aws_lambda_permission" "api_gw_lambda" {
+resource "aws_api_gateway_deployment" "api_deployment" {
+  depends_on = [aws_api_gateway_integration.lambda_proxy_integration]
+
+  rest_api_id = aws_api_gateway_rest_api.my_api.id
+  stage_name  = "prod"
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_lambda_permission" "api_gateway_permission" {
   statement_id  = "AllowExecutionFromAPIGateway"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.web.function_name
   principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_apigatewayv2_api.http_api.execution_arn}/*/*"
+  source_arn    = "${aws_api_gateway_rest_api.my_api.execution_arn}/*/*/*"
 }
 
-output "lambda_function_url" {
-  value = "${aws_apigatewayv2_api.http_api.api_endpoint}/"
+output "invoke_url" {
+  value = "${aws_api_gateway_rest_api.my_api.execution_arn}/${aws_api_gateway_deployment.api_deployment.stage_name}"
+}
+
+output "api_gateway_invoke_url" {
+  description = "The URL to invoke the API Gateway"
+  value       = "https://${aws_api_gateway_rest_api.my_api.id}.execute-api.ap-northeast-1.amazonaws.com/${aws_api_gateway_deployment.api_deployment.stage_name}"
 }

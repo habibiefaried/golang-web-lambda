@@ -20,8 +20,12 @@ func init() {
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 
-	e.GET("/echo", func(c echo.Context) error {
-		return c.JSON(http.StatusOK, Response{From: "echo", Message: time.Now().Format(time.UnixDate)})
+	e.GET("/", func(c echo.Context) error {
+		return c.JSON(http.StatusOK, Response{From: "mainpage", Message: time.Now().Format(time.UnixDate)})
+	})
+
+	e.POST("/test", func(c echo.Context) error {
+		return c.JSON(http.StatusOK, Response{From: "posttest", Message: time.Now().Format(time.UnixDate)})
 	})
 
 	echoLambda = echoadapter.New(e)

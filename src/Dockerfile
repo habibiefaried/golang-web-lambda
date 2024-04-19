@@ -7,8 +7,7 @@ RUN CGO_ENABLED=0 go build -a -tags timetzdata -installsuffix cgo -o main .
 
 FROM alpine:latest
 RUN apk --no-cache add ca-certificates
-WORKDIR /root/
-COPY --from=builder /app/main .
-RUN chmod +x ./main
+COPY --from=builder /app/main /main
+RUN chmod +x /main
 
-CMD ["./main"]
+ENTRYPOINT [ "/main" ]
