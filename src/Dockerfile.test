@@ -1,0 +1,17 @@
+FROM golang:1.22-alpine as builder
+RUN apk add --no-cache gcc musl-dev
+WORKDIR /app
+COPY . .
+RUN go mod download
+RUN CGO_ENABLED=0 go build -a -tags timetzdata -installsuffix cgo -o main .
+
+FROM alpine:latest
+RUN apk --no-cache add ca-certificates
+ADD https://github.com/aws/aws-lambda-runtime-interface-emulator/releases/latest/download/aws-lambda-rie /usr/local/bin/aws-lambda-rie
+RUN chmod 755 /usr/local/bin/aws-lambda-rie
+WORKDIR /root/
+COPY --from=builder /app/main .
+RUN chmod +x /root/main
+
+CMD ["/root/main"]
+ENTRYPOINT [ "/usr/local/bin/aws-lambda-rie" ]
