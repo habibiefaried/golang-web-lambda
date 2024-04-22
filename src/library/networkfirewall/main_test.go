@@ -6,9 +6,17 @@ import (
 
 // TestList tests the ViewRule function
 func TestList(t *testing.T) {
-	s, err := ViewRule("test")
+	s, token, err := ViewRule("test")
 	if err != nil {
 		t.Error(err)
 	}
-	t.Log(*s)
+	t.Log(*s, *token)
+}
+
+func TestAddRule(t *testing.T) {
+	token, err := AddRule("test", "facebook.com")
+	if err != nil {
+		t.Error(err)
+	}
+	t.Log(*token)
 }
