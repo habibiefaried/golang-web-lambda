@@ -3,6 +3,7 @@ package networkfirewall
 import (
 	"context"
 	"fmt"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	nf "github.com/aws/aws-sdk-go-v2/service/networkfirewall"
 	"github.com/aws/aws-sdk-go-v2/service/networkfirewall/types"
@@ -11,7 +12,7 @@ import (
 
 func awsAuth() (*nf.Client, error) {
 	// Load the Shared AWS Configuration (~/.aws/config)
-	cfg, err := config.LoadDefaultConfig(context.TODO())
+	cfg, err := config.LoadDefaultConfig(context.Background())
 	if err != nil {
 		return nil, err
 	}
@@ -35,14 +36,19 @@ func AddRule(rulegroupname string, domain string) (*string, error) {
 	}
 
 	baseSID = baseSID + strings.Count((*str), "\n") + 1
-	inputrule := (*str) + "\n" + fmt.Sprintf("pass tcp $HOME_NET any <> %v 443 (flow: not_established; sid:%v;)", domain, baseSID)
+	inputrule := (*str) + "\n" + fmt.Sprintf("pass tcp $HOME_NET any <> %v 443 (flow: not_established; sid:%v;)\n", domain, baseSID)
 
-	updateRGoutput, err := c.UpdateRuleGroup(context.TODO(), &nf.UpdateRuleGroupInput{
-		AnalyzeRuleGroup: false,
-		RuleGroupName:    &rulegroupname,
-		Rules:            &inputrule,
-		UpdateToken:      token,
-		Type:             types.RuleGroupTypeStateful,
+	fmt.Println(inputrule)
+
+	updateRGoutput, err := c.UpdateRuleGroup(context.Background(), &nf.UpdateRuleGroupInput{
+		RuleGroup: &types.RuleGroup{
+			RulesSource: &types.RulesSource{
+				RulesString: aws.String(`pass tcp any any <> any 443 (flow: not_established; sid:20001;)`),
+			},
+		},
+		RuleGroupName: aws.String(rulegroupname),
+		UpdateToken:   token,
+		Type:          types.RuleGroupTypeStateful,
 	})
 
 	if err != nil {
@@ -58,7 +64,7 @@ func ViewRule(rulegroupname string) (*string, *string, error) {
 		return nil, nil, err
 	}
 
-	describeRuleOutput, err := c.DescribeRuleGroup(context.TODO(), &nf.DescribeRuleGroupInput{
+	describeRuleOutput, err := c.DescribeRuleGroup(context.Background(), &nf.DescribeRuleGroupInput{
 		AnalyzeRuleGroup: false,
 		RuleGroupName:    &rulegroupname,
 		Type:             types.RuleGroupTypeStateful,
