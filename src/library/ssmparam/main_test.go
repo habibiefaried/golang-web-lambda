@@ -6,6 +6,17 @@ import (
 	"testing"
 )
 
+func TestMain(m *testing.M) {
+	os.Setenv("RULEGROUPNAME", "test")
+	os.Setenv("COUNTERSSMPATH", "/app/service/counter")
+
+	// Run all the tests
+	code := m.Run()
+
+	// Exit with the return code determined by the tests
+	os.Exit(code)
+}
+
 func TestGetParam(t *testing.T) {
 	counterSSMParam := os.Getenv("COUNTERSSMPATH")
 	num, err := GetCounter(counterSSMParam)

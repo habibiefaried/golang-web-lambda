@@ -3,8 +3,20 @@ package networkfirewall
 import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
+	"os"
 	"testing"
 )
+
+func TestMain(m *testing.M) {
+	os.Setenv("RULEGROUPNAME", "test")
+	os.Setenv("COUNTERSSMPATH", "/app/service/counter")
+
+	// Run all the tests
+	code := m.Run()
+
+	// Exit with the return code determined by the tests
+	os.Exit(code)
+}
 
 func TestDomainValid(t *testing.T) {
 	verdicts := map[string]bool{
@@ -27,20 +39,11 @@ func TestDomainValid(t *testing.T) {
 	}
 }
 
-// TestList tests the ViewRule function
-func TestList(t *testing.T) {
-	s, token, err := ViewRule("test")
-	if err != nil {
-		t.Error(err)
-	}
-	t.Log(*s, *token)
-}
-
 func TestAddRule(t *testing.T) {
 	domainsToBeAdded := []string{"facebook.com", "google.com", "yahoo.com"}
 
 	for _, v := range domainsToBeAdded {
-		token, err := AddRule("test", v)
+		token, err := AddRule(os.Getenv("RULEGROUPNAME"), v)
 		if err != nil {
 			t.Error(err)
 		}
@@ -49,8 +52,16 @@ func TestAddRule(t *testing.T) {
 
 }
 
+func TestList(t *testing.T) {
+	s, token, err := ViewRule(os.Getenv("RULEGROUPNAME"))
+	if err != nil {
+		t.Error(err)
+	}
+	t.Log(*s, *token)
+}
+
 func TestDeleteRule(t *testing.T) {
-	token, err := DeleteRule("test", "facebook.com")
+	token, err := DeleteRule(os.Getenv("RULEGROUPNAME"), "facebook.com")
 	if err != nil {
 		t.Error(err)
 	}
@@ -61,13 +72,17 @@ func TestWhitelisted(t *testing.T) {
 	verdicts := map[string]bool{
 		"facebook.com": false,
 		"google.com":   true,
+		"yahoo.com":    true,
 	}
 
 	for k, v := range verdicts {
-		ans, err := IsDomainWhitelisted("test", k)
+		ans, err := IsDomainWhitelisted(os.Getenv("RULEGROUPNAME"), k)
 		if err != nil {
 			t.Error(err)
 		}
 		assert.Equal(t, v, ans, "Expected result doesn't match")
 	}
+
+	_, _ = DeleteRule(os.Getenv("RULEGROUPNAME"), "google.com")
+	_, _ = DeleteRule(os.Getenv("RULEGROUPNAME"), "yahoo.com")
 }

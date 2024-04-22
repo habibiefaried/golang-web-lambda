@@ -27,6 +27,10 @@ func AddRule(rulegroupname string, domain string) (*string, error) {
 		return nil, err
 	}
 
+	if strings.Contains(*rules, domain) {
+		return nil, fmt.Errorf("Duplicated entry of domain '%v'", domain)
+	}
+
 	RuleNumber, err := ssm.GetCounter(counterSSMParam)
 	if err != nil {
 		return nil, err

@@ -1,6 +1,4 @@
 test:
-	export RULEGROUPNAME=test; \
-	export COUNTERSSMPATH=/app/service/counter; \
 	go clean -testcache ; \
 	go test -v ./...
 build:
