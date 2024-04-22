@@ -63,6 +63,19 @@ resource "aws_iam_policy" "lambda_svc_policy" {
         Resource = "*",
         Effect   = "Allow"
       },
+      {
+        Effect = "Allow"
+        Action = [
+          "ssm:PutParameter",
+          "ssm:GetParameter",
+          "ssm:GetParameters",
+          "ssm:GetParametersByPath",
+          "ssm:DescribeParameters"
+        ]
+        Resource = [
+          "arn:aws:ssm:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:parameter/app/service/*"
+        ]
+      },
     ],
   })
 }

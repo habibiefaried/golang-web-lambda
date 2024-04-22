@@ -10,4 +10,8 @@ module "lambda_function_container_image" {
 
   image_uri    = "${aws_ecr_repository.web.repository_url}:${var.image_version}"
   package_type = "Image"
+
+  environment_variables = {
+    RULEGROUPNAME = "test"
+  }
 }
