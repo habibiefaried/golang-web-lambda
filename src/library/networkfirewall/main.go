@@ -9,9 +9,6 @@ import (
 )
 
 func AddRule(rulegroupname string, domain string) (*string, error) {
-	baseSIDalert := 30000
-	baseSIDpass := 40000
-
 	c, err := awsAuth()
 	if err != nil {
 		return nil, err
@@ -22,13 +19,11 @@ func AddRule(rulegroupname string, domain string) (*string, error) {
 		return nil, err
 	}
 
-	LineOfRules := strings.Count(*rules, "\n") + 1
+	RuleNumber := getLatestSID(*rules) + 1
 
-	baseSIDalert = baseSIDalert + LineOfRules
-	baseSIDpass = baseSIDpass + LineOfRules
-
-	inputrule := *rules + "\n" + fmt.Sprintf(`alert tls $HOME_NET any -> any 443 (tls.sni; content:"%v"; endswith; msg:"Matching TLS allowlisted FQDNs"; sid:%v;)`, domain, baseSIDalert) + "\n"
-	inputrule = inputrule + fmt.Sprintf(`pass tls $HOME_NET any -> any 443 (tls.sni; content:"%v"; endswith; sid:%v;)`, domain, baseSIDpass)
+	inputrule := *rules + "\n" + fmt.Sprintf(`alert tls $HOME_NET any -> any 443 (tls.sni; content:"%v"; endswith; msg:"Matching TLS allowlisted FQDNs"; sid:%v;) `, domain, 30000+RuleNumber) + "\n"
+	inputrule = inputrule + fmt.Sprintf(`pass tls $HOME_NET any -> any 443 (tls.sni; content:"%v"; endswith; sid:%v;)`, domain, 40000+RuleNumber) + "\n"
+	inputrule = inputrule + fmt.Sprintf("## %v", RuleNumber)
 
 	updateRGoutput, err := updaterulegroupint(c, rulegroupname, inputrule, token)
 
@@ -69,13 +64,18 @@ func DeleteRule(rulegroupname string, domain string) (*string, error) {
 		return nil, err
 	}
 
+	latestSID := getLatestSID(*rules)
+
 	lines := strings.Split(*rules, "\n")
 	var filteredLines []string
+
 	for _, line := range lines {
-		if !strings.Contains(line, domain) {
+		if !strings.Contains(line, domain) && !strings.Contains(line, "##") {
 			filteredLines = append(filteredLines, line)
 		}
 	}
+
+	filteredLines = append(filteredLines, fmt.Sprintf("## %v", latestSID))
 
 	updateRGoutput, err := updaterulegroupint(c, rulegroupname, strings.Join(filteredLines, "\n"), token)
 	if err != nil {

@@ -6,6 +6,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	nf "github.com/aws/aws-sdk-go-v2/service/networkfirewall"
 	"github.com/aws/aws-sdk-go-v2/service/networkfirewall/types"
+	"strconv"
+	"strings"
 )
 
 func awsAuth() (*nf.Client, error) {
@@ -42,4 +44,25 @@ func updaterulegroupint(c *nf.Client, rulegroupname string, inputrule string, to
 		UpdateToken:   token,
 		Type:          types.RuleGroupTypeStateful,
 	})
+}
+
+func getLatestSID(inputrule string) int {
+	// Splitting the string into lines
+	lines := strings.Split(inputrule, "\n")
+
+	// Getting the last line
+	if len(lines) > 0 {
+		lastLine := lines[len(lines)-1]
+		if lastLine[:2] == "##" {
+			num, err := strconv.Atoi(lastLine[3:])
+			if err != nil {
+				return 0
+			}
+			return num
+		} else {
+			return 0
+		}
+	} else {
+		return 0
+	}
 }
