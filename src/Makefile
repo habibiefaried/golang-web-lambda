@@ -1,7 +1,7 @@
 test:
 	go clean -testcache ; go test -v ./...
 build:
-	export VERSION=15; \
+	export VERSION=16; \
 	docker build . --platform linux/amd64 -t 985417314751.dkr.ecr.ap-northeast-1.amazonaws.com/lambda-container-repo:$$VERSION && \
 	docker push 985417314751.dkr.ecr.ap-northeast-1.amazonaws.com/lambda-container-repo:$$VERSION; \
 	cd ../terraform/ && \
