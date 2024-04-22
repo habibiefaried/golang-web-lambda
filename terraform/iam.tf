@@ -47,3 +47,40 @@ resource "aws_iam_role_policy_attachment" "lambda_ecr_policy_attach" {
   role       = aws_iam_role.lambda_ecr_role.name
   policy_arn = aws_iam_policy.lambda_ecr_policy.arn
 }
+
+resource "aws_iam_policy" "lambda_svc_policy" {
+  name = "lambda_svc_policy"
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Action = [
+          "network-firewall:UpdateRuleGroup",
+          "network-firewall:DescribeRuleGroup",
+          "network-firewall:ListRuleGroups",
+        ],
+        Resource = "*",
+        Effect   = "Allow"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ssm:PutParameter",
+          "ssm:GetParameter",
+          "ssm:GetParameters",
+          "ssm:GetParametersByPath",
+          "ssm:DescribeParameters"
+        ]
+        Resource = [
+          "arn:aws:ssm:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:parameter/app/service/*"
+        ]
+      },
+    ],
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_svc_policy_attach" {
+  role       = module.lambda_function_container_image.lambda_role_name
+  policy_arn = aws_iam_policy.lambda_svc_policy.arn
+}

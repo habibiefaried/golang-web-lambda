@@ -6,41 +6,56 @@ import (
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	nf "github.com/habibiefaried/golang-web-lambda/library/networkfirewall"
 	"net/http"
+	"os"
 	"strings"
 )
 
 type RequestBody struct {
-	Test string `json:"test"`
+	Domain string `json:"domain"`
 }
 
 func handleRequest(ctx context.Context, request events.APIGatewayV2HTTPRequest) (events.APIGatewayProxyResponse, error) {
 	// Normalize path
+	NetworkFirewallRuleGroupName := os.Getenv("RULEGROUPNAME")
 	path := strings.Trim(request.RawPath, "/")
 
 	// Default response for "/"
 	if path == "" {
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusOK,
-			Body:       "Hello from Root!",
+			Body:       "Hello World!",
 		}, nil
 	}
 
 	switch path {
-	case "reflect":
-		testValue := request.QueryStringParameters["test"]
-		if testValue == "" {
+	case "is-whitelisted":
+		domain := request.QueryStringParameters["domain"]
+		if domain == "" {
 			return events.APIGatewayProxyResponse{
-				StatusCode: http.StatusBadRequest, // 400
-				Body:       "Query parameter 'test' is missing",
+				StatusCode: http.StatusBadRequest,
+				Body:       "Query parameter 'domain' is missing",
 			}, nil
 		}
-		responseMessage := "Received 'test' parameter: " + testValue
-		return events.APIGatewayProxyResponse{
-			StatusCode: http.StatusOK,
-			Body:       responseMessage,
-		}, nil
-	case "post":
+
+		isWhitelisted, err := nf.IsDomainWhitelisted(NetworkFirewallRuleGroupName, domain)
+		if err != nil {
+			return events.APIGatewayProxyResponse{
+				StatusCode: http.StatusInternalServerError,
+				Body:       err.Error(),
+			}, nil
+		} else {
+			responseMessage := "yes"
+			if !isWhitelisted {
+				responseMessage = "no"
+			}
+			return events.APIGatewayProxyResponse{
+				StatusCode: http.StatusOK,
+				Body:       responseMessage,
+			}, nil
+		}
+	case "whitelist":
 		var body RequestBody
 		err := json.Unmarshal([]byte(request.Body), &body)
 		if err != nil {
@@ -49,9 +64,18 @@ func handleRequest(ctx context.Context, request events.APIGatewayV2HTTPRequest) 
 				Body:       "Invalid JSON in request body",
 			}, nil
 		}
+
+		token, err := nf.AddRule(NetworkFirewallRuleGroupName, body.Domain)
+		if err != nil {
+			return events.APIGatewayProxyResponse{
+				StatusCode: http.StatusInternalServerError,
+				Body:       err.Error(),
+			}, nil
+		}
+
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusOK,
-			Body:       fmt.Sprintf("POST request received with 'test' value: %s", body.Test),
+			Body:       fmt.Sprintf("Added domain %v to be whitelisted with token ref %v", body.Domain, *token),
 		}, nil
 	default:
 		return events.APIGatewayProxyResponse{

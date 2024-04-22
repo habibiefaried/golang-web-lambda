@@ -6,8 +6,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	nf "github.com/aws/aws-sdk-go-v2/service/networkfirewall"
 	"github.com/aws/aws-sdk-go-v2/service/networkfirewall/types"
-	"strconv"
-	"strings"
+	"regexp"
+	"os"
 )
 
 func awsAuth() (*nf.Client, error) {
@@ -25,7 +25,7 @@ func awsAuth() (*nf.Client, error) {
 func updaterulegroupint(c *nf.Client, rulegroupname string, inputrule string, token *string) (*nf.UpdateRuleGroupOutput, error) {
 	IPSets := map[string]types.IPSet{}
 	IPSets["HOME_NET"] = types.IPSet{
-		Definition: []string{"10.0.0.0/24"},
+		Definition: []string{os.Getenv("HOME_NET")},
 	}
 
 	return c.UpdateRuleGroup(context.Background(), &nf.UpdateRuleGroupInput{
@@ -46,23 +46,12 @@ func updaterulegroupint(c *nf.Client, rulegroupname string, inputrule string, to
 	})
 }
 
-func getLatestSID(inputrule string) int {
-	// Splitting the string into lines
-	lines := strings.Split(inputrule, "\n")
+// isDomainValid is a function where it validates the string
+func isDomainValid(domain string) bool {
+	// Regex for basic domain validation
+	pattern := `^(?i)(([a-z0-9]|[a-z0-9][a-z0-9\-]*[a-z0-9])\.){1,126}([a-z]|[a-z][a-z\-]*[a-z])$`
 
-	// Getting the last line
-	if len(lines) > 0 {
-		lastLine := lines[len(lines)-1]
-		if lastLine[:2] == "##" {
-			num, err := strconv.Atoi(lastLine[3:])
-			if err != nil {
-				return 0
-			}
-			return num
-		} else {
-			return 0
-		}
-	} else {
-		return 0
-	}
+	// Compile the regex
+	re := regexp.MustCompile(pattern)
+	return re.MatchString(domain)
 }
