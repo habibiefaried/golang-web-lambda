@@ -10,7 +10,7 @@ import (
 
 func AddRule(rulegroupname string, domain string) (*string, error) {
 	if !isDomainValid(domain) {
-		return nil, fmt.Errorf("Domain %v is invalid", domain)
+		return nil, fmt.Errorf("Domain '%v' is invalid", domain)
 	}
 
 	c, err := awsAuth()
@@ -59,7 +59,7 @@ func ViewRule(rulegroupname string) (*string, *string, error) {
 
 func DeleteRule(rulegroupname string, domain string) (*string, error) {
 	if !isDomainValid(domain) {
-		return nil, fmt.Errorf("Domain %v is invalid", domain)
+		return nil, fmt.Errorf("Domain '%v' is invalid", domain)
 	}
 
 	c, err := awsAuth()
@@ -94,7 +94,7 @@ func DeleteRule(rulegroupname string, domain string) (*string, error) {
 
 func IsDomainWhitelisted(rulegroupname string, domain string) (bool, error) {
 	if !isDomainValid(domain) {
-		return false, fmt.Errorf("Domain %v is invalid", domain)
+		return false, fmt.Errorf("Domain '%v' is invalid", domain)
 	}
 
 	rules, _, err := ViewRule(rulegroupname)
