@@ -2,18 +2,13 @@ package ssmparam
 
 import (
 	"github.com/stretchr/testify/assert"
-	"strconv"
+	"os"
 	"testing"
 )
 
 func TestGetParam(t *testing.T) {
-	counterSSMParam := "/app/service/counter"
-	s, err := getParameter(counterSSMParam)
-	if err != nil {
-		t.Error(err)
-	}
-	t.Log(*s)
-	num, err := strconv.Atoi(*s)
+	counterSSMParam := os.getenv("COUNTERSSMPATH")
+	num, err := GetCounter(counterSSMParam)
 	if err != nil {
 		t.Error(err)
 	}
@@ -23,12 +18,7 @@ func TestGetParam(t *testing.T) {
 		t.Error(err)
 	}
 
-	s2, err := getParameter(counterSSMParam)
-	if err != nil {
-		t.Error(err)
-	}
-	t.Log(*s2)
-	num2, err := strconv.Atoi(*s2)
+	num2, err := GetCounter(counterSSMParam)
 	if err != nil {
 		t.Error(err)
 	}

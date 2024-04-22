@@ -54,14 +54,23 @@ func updateParameter(parameterName, parameterValue string) (*ssm.PutParameterOut
 	return result, nil
 }
 
-// IncreaseCounter is used when new firewall rule is added
-func IncreaseCounter(parameterName string) error {
+func GetCounter(parameterName string) (int, error) {
 	s, err := getParameter(parameterName)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	num, err := strconv.Atoi(*s)
+	if err != nil {
+		return 0, err
+	}
+
+	return num, nil
+}
+
+// IncreaseCounter is used when new firewall rule is added
+func IncreaseCounter(parameterName string) error {
+	num, err := GetCounter(parameterName)
 	if err != nil {
 		return err
 	}

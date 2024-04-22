@@ -12,6 +12,7 @@ module "lambda_function_container_image" {
   package_type = "Image"
 
   environment_variables = {
-    RULEGROUPNAME = "test"
+    RULEGROUPNAME  = "test"
+    COUNTERSSMPATH = "/app/service/counter"
   }
 }

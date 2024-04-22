@@ -5,10 +5,13 @@ import (
 	"fmt"
 	nf "github.com/aws/aws-sdk-go-v2/service/networkfirewall"
 	"github.com/aws/aws-sdk-go-v2/service/networkfirewall/types"
+	ssm "github.com/habibiefaried/golang-web-lambda/library/ssmparam"
 	"strings"
 )
 
 func AddRule(rulegroupname string, domain string) (*string, error) {
+	counterSSMParam := os.getenv("COUNTERSSMPATH")
+
 	if !isDomainValid(domain) {
 		return nil, fmt.Errorf("Domain '%v' is invalid", domain)
 	}
@@ -23,14 +26,19 @@ func AddRule(rulegroupname string, domain string) (*string, error) {
 		return nil, err
 	}
 
-	RuleNumber := getLatestSID(*rules) + 1
+	RuleNumber, err := ssm.GetCounter(counterSSMParam)
+	if err != nil {
+		return nil, err
+	}
 
 	inputrule := *rules + "\n" + fmt.Sprintf(`alert tls $HOME_NET any -> any 443 (tls.sni; content:"%v"; endswith; msg:"Matching TLS allowlisted FQDNs"; sid:%v;) `, domain, 30000+RuleNumber) + "\n"
 	inputrule = inputrule + fmt.Sprintf(`pass tls $HOME_NET any -> any 443 (tls.sni; content:"%v"; endswith; sid:%v;)`, domain, 40000+RuleNumber) + "\n"
-	inputrule = inputrule + fmt.Sprintf("## %v", RuleNumber)
-
 	updateRGoutput, err := updaterulegroupint(c, rulegroupname, inputrule, token)
+	if err != nil {
+		return nil, err
+	}
 
+	err = ssm.IncreaseCounter(counterSSMParam)
 	if err != nil {
 		return nil, err
 	}
@@ -72,18 +80,14 @@ func DeleteRule(rulegroupname string, domain string) (*string, error) {
 		return nil, err
 	}
 
-	latestSID := getLatestSID(*rules)
-
 	lines := strings.Split(*rules, "\n")
 	var filteredLines []string
 
 	for _, line := range lines {
-		if !strings.Contains(line, domain) && !strings.Contains(line, "##") {
+		if !strings.Contains(line, domain) {
 			filteredLines = append(filteredLines, line)
 		}
 	}
-
-	filteredLines = append(filteredLines, fmt.Sprintf("## %v", latestSID))
 
 	updateRGoutput, err := updaterulegroupint(c, rulegroupname, strings.Join(filteredLines, "\n"), token)
 	if err != nil {

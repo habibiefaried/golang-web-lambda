@@ -17,7 +17,7 @@ type RequestBody struct {
 
 func handleRequest(ctx context.Context, request events.APIGatewayV2HTTPRequest) (events.APIGatewayProxyResponse, error) {
 	// Normalize path
-	NetworkFirewallRuleGroupName := "test"
+	NetworkFirewallRuleGroupName := os.getenv("RULEGROUPNAME")
 	path := strings.Trim(request.RawPath, "/")
 
 	// Default response for "/"
