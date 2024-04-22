@@ -6,11 +6,12 @@ import (
 	nf "github.com/aws/aws-sdk-go-v2/service/networkfirewall"
 	"github.com/aws/aws-sdk-go-v2/service/networkfirewall/types"
 	ssm "github.com/habibiefaried/golang-web-lambda/library/ssmparam"
+	"os"
 	"strings"
 )
 
 func AddRule(rulegroupname string, domain string) (*string, error) {
-	counterSSMParam := os.getenv("COUNTERSSMPATH")
+	counterSSMParam := os.Getenv("COUNTERSSMPATH")
 
 	if !isDomainValid(domain) {
 		return nil, fmt.Errorf("Domain '%v' is invalid", domain)

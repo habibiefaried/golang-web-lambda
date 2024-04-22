@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	nf "github.com/habibiefaried/golang-web-lambda/library/networkfirewall"
 	"net/http"
+	"os"
 	"strings"
 )
 
@@ -17,7 +18,7 @@ type RequestBody struct {
 
 func handleRequest(ctx context.Context, request events.APIGatewayV2HTTPRequest) (events.APIGatewayProxyResponse, error) {
 	// Normalize path
-	NetworkFirewallRuleGroupName := os.getenv("RULEGROUPNAME")
+	NetworkFirewallRuleGroupName := os.Getenv("RULEGROUPNAME")
 	path := strings.Trim(request.RawPath, "/")
 
 	// Default response for "/"

@@ -7,7 +7,7 @@ import (
 )
 
 func TestGetParam(t *testing.T) {
-	counterSSMParam := os.getenv("COUNTERSSMPATH")
+	counterSSMParam := os.Getenv("COUNTERSSMPATH")
 	num, err := GetCounter(counterSSMParam)
 	if err != nil {
 		t.Error(err)
