@@ -14,5 +14,6 @@ module "lambda_function_container_image" {
   environment_variables = {
     RULEGROUPNAME  = "test"
     COUNTERSSMPATH = "/app/service/counter"
+    HOME_NET       = "10.0.0.0/24"
   }
 }

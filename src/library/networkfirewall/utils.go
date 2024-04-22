@@ -7,6 +7,7 @@ import (
 	nf "github.com/aws/aws-sdk-go-v2/service/networkfirewall"
 	"github.com/aws/aws-sdk-go-v2/service/networkfirewall/types"
 	"regexp"
+	"os"
 )
 
 func awsAuth() (*nf.Client, error) {
@@ -24,7 +25,7 @@ func awsAuth() (*nf.Client, error) {
 func updaterulegroupint(c *nf.Client, rulegroupname string, inputrule string, token *string) (*nf.UpdateRuleGroupOutput, error) {
 	IPSets := map[string]types.IPSet{}
 	IPSets["HOME_NET"] = types.IPSet{
-		Definition: []string{"10.0.0.0/24"},
+		Definition: []string{os.Getenv("HOME_NET")},
 	}
 
 	return c.UpdateRuleGroup(context.Background(), &nf.UpdateRuleGroupInput{
