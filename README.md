@@ -1,7 +1,14 @@
 # golang-web-lambda
 
-## How to test
+# How to test
 
+## Unit test
+
+```
+make test
+```
+
+## Test the lambda
 POST
 
 ```

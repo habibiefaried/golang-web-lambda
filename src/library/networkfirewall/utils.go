@@ -6,6 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	nf "github.com/aws/aws-sdk-go-v2/service/networkfirewall"
 	"github.com/aws/aws-sdk-go-v2/service/networkfirewall/types"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -65,4 +66,14 @@ func getLatestSID(inputrule string) int {
 	} else {
 		return 0
 	}
+}
+
+// isDomainValid is a function where it validates the string
+func isDomainValid(domain string) bool {
+	// Regex for basic domain validation
+	pattern := `^(?i)(([a-z0-9]|[a-z0-9][a-z0-9\-]*[a-z0-9])\.){1,126}([a-z]|[a-z][a-z\-]*[a-z])$`
+
+	// Compile the regex
+	re := regexp.MustCompile(pattern)
+	return re.MatchString(domain)
 }
