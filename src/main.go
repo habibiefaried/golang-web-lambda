@@ -17,6 +17,7 @@ type RequestBody struct {
 
 func handleRequest(ctx context.Context, request events.APIGatewayV2HTTPRequest) (events.APIGatewayProxyResponse, error) {
 	// Normalize path
+	NetworkFirewallRuleGroupName := "test"
 	path := strings.Trim(request.RawPath, "/")
 
 	// Default response for "/"
@@ -37,7 +38,7 @@ func handleRequest(ctx context.Context, request events.APIGatewayV2HTTPRequest) 
 			}, nil
 		}
 
-		isWhitelisted, err := nf.IsDomainWhitelisted("test", domain)
+		isWhitelisted, err := nf.IsDomainWhitelisted(NetworkFirewallRuleGroupName, domain)
 		if err != nil {
 			return events.APIGatewayProxyResponse{
 				StatusCode: http.StatusInternalServerError,
@@ -62,9 +63,18 @@ func handleRequest(ctx context.Context, request events.APIGatewayV2HTTPRequest) 
 				Body:       "Invalid JSON in request body",
 			}, nil
 		}
+
+		token, err := nf.AddRule(NetworkFirewallRuleGroupName, body.Domain)
+		if err != nil {
+			return events.APIGatewayProxyResponse{
+				StatusCode: http.StatusInternalServerError,
+				Body:       err.Error(),
+			}, nil
+		}
+
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusOK,
-			Body:       fmt.Sprintf("POST request received with 'domain' value: %s", body.Domain),
+			Body:       fmt.Sprintf("Added domain %v to be whitelisted with token ref %v", body.Domain, token),
 		}, nil
 	default:
 		return events.APIGatewayProxyResponse{
