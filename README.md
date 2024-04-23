@@ -12,11 +12,11 @@ make test
 POST
 
 ```
-curl "https://ahkr2sycw333enfo2gqwv3x5ia0bmvvf.lambda-url.ap-northeast-1.on.aws/whitelist" -d '{"domain": "itb.ac.id"}' -H "Content-Type: application/json"
+curl "http://my-alb-121167031.ap-northeast-1.elb.amazonaws.com/whitelist" -d '{"domain": "itb.ac.id"}' -H "Content-Type: application/json"
 ```
 
 GET
 
 ```
-curl "https://ahkr2sycw333enfo2gqwv3x5ia0bmvvf.lambda-url.ap-northeast-1.on.aws/is-whitelisted?domain=itb.ac.id"
+curl "http://my-alb-121167031.ap-northeast-1.elb.amazonaws.com/is-whitelisted?domain=itb.ac.id"
 ```
