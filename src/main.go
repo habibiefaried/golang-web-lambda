@@ -12,20 +12,17 @@ import (
 	"strings"
 )
 
-type RequestBody struct {
-	Domain string `json:"domain"`
-}
-
-func handleRequest(ctx context.Context, request events.APIGatewayV2HTTPRequest) (events.APIGatewayProxyResponse, error) {
+func handleRequest(ctx context.Context, request events.ALBTargetGroupRequest) (events.ALBTargetGroupResponse, error) {
 	// Normalize path
 	NetworkFirewallRuleGroupName := os.Getenv("RULEGROUPNAME")
-	path := strings.Trim(request.RawPath, "/")
+	path := strings.Trim(request.Path, "/")
 
 	// Default response for "/"
 	if path == "" {
-		return events.APIGatewayProxyResponse{
+		return events.ALBTargetGroupResponse{
 			StatusCode: http.StatusOK,
 			Body:       "Hello World!",
+			Headers:    map[string]string{"Content-Type": "text/plain"},
 		}, nil
 	}
 
@@ -33,54 +30,61 @@ func handleRequest(ctx context.Context, request events.APIGatewayV2HTTPRequest) 
 	case "is-whitelisted":
 		domain := request.QueryStringParameters["domain"]
 		if domain == "" {
-			return events.APIGatewayProxyResponse{
+			return events.ALBTargetGroupResponse{
 				StatusCode: http.StatusBadRequest,
 				Body:       "Query parameter 'domain' is missing",
+				Headers:    map[string]string{"Content-Type": "text/plain"},
 			}, nil
 		}
 
 		isWhitelisted, err := nf.IsDomainWhitelisted(NetworkFirewallRuleGroupName, domain)
 		if err != nil {
-			return events.APIGatewayProxyResponse{
+			return events.ALBTargetGroupResponse{
 				StatusCode: http.StatusInternalServerError,
 				Body:       err.Error(),
+				Headers:    map[string]string{"Content-Type": "text/plain"},
 			}, nil
 		} else {
 			responseMessage := "yes"
 			if !isWhitelisted {
 				responseMessage = "no"
 			}
-			return events.APIGatewayProxyResponse{
+			return events.ALBTargetGroupResponse{
 				StatusCode: http.StatusOK,
 				Body:       responseMessage,
+				Headers:    map[string]string{"Content-Type": "text/plain"},
 			}, nil
 		}
 	case "whitelist":
 		var body RequestBody
 		err := json.Unmarshal([]byte(request.Body), &body)
 		if err != nil {
-			return events.APIGatewayProxyResponse{
+			return events.ALBTargetGroupResponse{
 				StatusCode: http.StatusBadRequest,
 				Body:       "Invalid JSON in request body",
+				Headers:    map[string]string{"Content-Type": "text/plain"},
 			}, nil
 		}
 
 		token, err := nf.AddRule(NetworkFirewallRuleGroupName, body.Domain)
 		if err != nil {
-			return events.APIGatewayProxyResponse{
+			return events.ALBTargetGroupResponse{
 				StatusCode: http.StatusInternalServerError,
 				Body:       err.Error(),
+				Headers:    map[string]string{"Content-Type": "text/plain"},
 			}, nil
 		}
 
-		return events.APIGatewayProxyResponse{
+		return events.ALBTargetGroupResponse{
 			StatusCode: http.StatusOK,
 			Body:       fmt.Sprintf("Added domain %v to be whitelisted with token ref %v", body.Domain, *token),
+			Headers:    map[string]string{"Content-Type": "text/plain"},
 		}, nil
 	default:
-		return events.APIGatewayProxyResponse{
+		return events.ALBTargetGroupResponse{
 			StatusCode: http.StatusNotFound,
 			Body:       "Not Found",
+			Headers:    map[string]string{"Content-Type": "text/plain"},
 		}, nil
 	}
 }
