@@ -6,7 +6,7 @@ module "lambda_function_container_image" {
   description   = "My example web"
 
   create_package             = false
-  create_lambda_function_url = true
+  create_lambda_function_url = false
 
   image_uri    = "${aws_ecr_repository.web.repository_url}:${var.image_version}"
   package_type = "Image"
