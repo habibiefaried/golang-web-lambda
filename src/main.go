@@ -90,7 +90,7 @@ func handleRequest(ctx context.Context, request events.ALBTargetGroupRequest) (e
 
 		return events.ALBTargetGroupResponse{
 			StatusCode: http.StatusOK,
-			Body:       fmt.Sprintf("Added domain %v to be whitelisted with token ref %v", body.Domain, *token),
+			Body:       fmt.Sprintf("Added %v:%v to be whitelisted with token ref %v", body.Domain, body.Port, *token),
 			Headers:    map[string]string{"Content-Type": "text/plain"},
 		}, nil
 	default:

@@ -12,11 +12,11 @@ make test
 POST
 
 ```
-curl "http://my-alb-323469957.ap-northeast-1.elb.amazonaws.com/whitelist" -d '{"domain": "itb.ac.id"}' -H "Content-Type: application/json"
+curl "http://my-alb-323469957.ap-northeast-1.elb.amazonaws.com/whitelist" -d '{"domain": "domain.test", "port": "443"}' -H "Content-Type: application/json"
 ```
 
 GET
 
 ```
-curl "http://my-alb-323469957.ap-northeast-1.elb.amazonaws.com/is-whitelisted?domain=itb.ac.id&port=443"
+curl "http://my-alb-323469957.ap-northeast-1.elb.amazonaws.com/is-whitelisted?domain=domain.test&port=443"
 ```
