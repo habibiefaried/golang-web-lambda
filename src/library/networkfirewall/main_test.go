@@ -30,15 +30,15 @@ func TestDomainValid(t *testing.T) {
 
 func TestAddRule(t *testing.T) {
 	domainsToBeAdded := []RequestBody{
-		&RequestBody{
+		RequestBody{
 			Domain: "facebook.com",
 			Port:   "80",
 		},
-		&RequestBody{
+		RequestBody{
 			Domain: "google.com",
 			Port:   "443",
 		},
-		&RequestBody{
+		RequestBody{
 			Domain: "yahoo.com",
 			Port:   "80",
 		},
@@ -63,7 +63,7 @@ func TestList(t *testing.T) {
 }
 
 func TestDeleteRule(t *testing.T) {
-	token, err := DeleteRule(os.Getenv("RULEGROUPNAME"), &RequestBody{
+	token, err := DeleteRule(os.Getenv("RULEGROUPNAME"), RequestBody{
 		Domain: "facebook.com",
 		Port:   "80",
 	})
@@ -78,22 +78,23 @@ func TestWhitelisted(t *testing.T) {
 	verdicts[RequestBody{Domain: "facebook.com", Port: "80"}] = false
 	verdicts[RequestBody{Domain: "google.com", Port: "80"}] = false
 	verdicts[RequestBody{Domain: "google.com", Port: "443"}] = true
-	verdicts[RequestBody{Domain: "google.com", Port: "80"}] = true
-	verdicts[RequestBody{Domain: "google.com", Port: "443"}] = false
+	verdicts[RequestBody{Domain: "yahoo.com", Port: "80"}] = true
+	verdicts[RequestBody{Domain: "yahoo.com", Port: "800"}] = false
+	verdicts[RequestBody{Domain: "yahoo.com", Port: "443"}] = false
 
 	for k, v := range verdicts {
 		ans, err := IsDomainWhitelisted(os.Getenv("RULEGROUPNAME"), k)
 		if err != nil {
 			t.Error(err)
 		}
-		assert.Equal(t, v, ans, "Expected result doesn't match")
+		assert.Equal(t, v, ans, fmt.Sprintf("Expected result doesn't match on %+v", k))
 	}
 
-	_, _ = DeleteRule(os.Getenv("RULEGROUPNAME"), &RequestBody{
+	_, _ = DeleteRule(os.Getenv("RULEGROUPNAME"), RequestBody{
 		Domain: "google.com",
 		Port:   "443",
 	})
-	_, _ = DeleteRule(os.Getenv("RULEGROUPNAME"), &RequestBody{
+	_, _ = DeleteRule(os.Getenv("RULEGROUPNAME"), RequestBody{
 		Domain: "yahoo.com",
 		Port:   "80",
 	})

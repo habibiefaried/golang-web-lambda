@@ -36,8 +36,8 @@ func AddRule(rulegroupname string, rb RequestBody) (*string, error) {
 		return nil, err
 	}
 
-	inputrule := *rules + "\n" + fmt.Sprintf(`alert tls $HOME_NET any -> any %v (tls.sni; content:"%v"; endswith; msg:"Matching TLS allowlisted FQDNs"; sid:%v;) `, rb.Domain, rb.Port, 300000+RuleNumber) + "\n"
-	inputrule = inputrule + fmt.Sprintf(`pass tls $HOME_NET any -> any %v (tls.sni; content:"%v"; endswith; sid:%v;)`, rb.Domain, rb.Port, 600000+RuleNumber) + "\n"
+	inputrule := *rules + "\n" + fmt.Sprintf(`alert tls $HOME_NET any -> any %v (tls.sni; content:"%v"; endswith; msg:"Matching TLS allowlisted FQDNs"; sid:%v;) `, rb.Port, rb.Domain, 300000+RuleNumber) + "\n"
+	inputrule = inputrule + fmt.Sprintf(`pass tls $HOME_NET any -> any %v (tls.sni; content:"%v"; endswith; sid:%v;)`, rb.Port, rb.Domain, 600000+RuleNumber)
 	updateRGoutput, err := updaterulegroupint(c, rulegroupname, inputrule, token)
 	if err != nil {
 		return nil, err
@@ -89,7 +89,7 @@ func DeleteRule(rulegroupname string, rb RequestBody) (*string, error) {
 	var filteredLines []string
 
 	for _, line := range lines {
-		if !isRuleExist(*rules, rb) {
+		if !isRuleExist(line, rb) {
 			filteredLines = append(filteredLines, line)
 		}
 	}
@@ -115,5 +115,5 @@ func IsDomainWhitelisted(rulegroupname string, rb RequestBody) (bool, error) {
 }
 
 func isRuleExist(rules string, rb RequestBody) bool {
-	return strings.Contains(rules, fmt.Sprintf("%v %v", rb.Domain, rb.Port))
+	return strings.Contains(rules, fmt.Sprintf(`any %v (tls.sni; content:"%v";`, rb.Port, rb.Domain))
 }

@@ -70,6 +70,15 @@ func handleRequest(ctx context.Context, request events.ALBTargetGroupRequest) (e
 			}, nil
 		}
 
+		err = body.Validate()
+		if err != nil {
+			return events.ALBTargetGroupResponse{
+				StatusCode: http.StatusBadRequest,
+				Body:       err.Error(),
+				Headers:    map[string]string{"Content-Type": "text/plain"},
+			}, nil
+		}
+
 		token, err := nf.AddRule(NetworkFirewallRuleGroupName, body)
 		if err != nil {
 			return events.ALBTargetGroupResponse{

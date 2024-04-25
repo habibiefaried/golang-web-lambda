@@ -4,10 +4,8 @@ WORKDIR /app
 COPY . .
 RUN go mod download
 RUN CGO_ENABLED=0 go build -a -tags timetzdata -installsuffix cgo -o main .
+RUN chmod +x main
 
-FROM alpine:latest
-RUN apk --no-cache add ca-certificates
+FROM gcr.io/distroless/static
 COPY --from=builder /app/main /main
-RUN chmod +x /main
-
 ENTRYPOINT [ "/main" ]
