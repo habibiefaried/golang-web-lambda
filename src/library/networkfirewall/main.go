@@ -10,11 +10,11 @@ import (
 	"strings"
 )
 
-func AddRule(rulegroupname string, domain string) (*string, error) {
+func AddRule(rulegroupname string, rb RequestBody) (*string, error) {
 	counterSSMParam := os.Getenv("COUNTERSSMPATH")
 
-	if !isDomainValid(domain) {
-		return nil, fmt.Errorf("Domain '%v' is invalid", domain)
+	if !isDomainValid(rb.Domain) {
+		return nil, fmt.Errorf("Domain '%v' is invalid", rb.Domain)
 	}
 
 	c, err := awsAuth()
@@ -27,8 +27,8 @@ func AddRule(rulegroupname string, domain string) (*string, error) {
 		return nil, err
 	}
 
-	if strings.Contains(*rules, domain) {
-		return nil, fmt.Errorf("Duplicated entry of domain '%v'", domain)
+	if isRuleExist(*rules, rb) {
+		return nil, fmt.Errorf("Duplicated entry of domain '%v' and port '%v'", rb.Domain, rb.Port)
 	}
 
 	RuleNumber, err := ssm.GetCounter(counterSSMParam)
@@ -36,8 +36,8 @@ func AddRule(rulegroupname string, domain string) (*string, error) {
 		return nil, err
 	}
 
-	inputrule := *rules + "\n" + fmt.Sprintf(`alert tls $HOME_NET any -> any 443 (tls.sni; content:"%v"; endswith; msg:"Matching TLS allowlisted FQDNs"; sid:%v;) `, domain, 30000+RuleNumber) + "\n"
-	inputrule = inputrule + fmt.Sprintf(`pass tls $HOME_NET any -> any 443 (tls.sni; content:"%v"; endswith; sid:%v;)`, domain, 40000+RuleNumber) + "\n"
+	inputrule := *rules + "\n" + fmt.Sprintf(`alert tls $HOME_NET any -> any %v (tls.sni; content:"%v"; endswith; msg:"Matching TLS allowlisted FQDNs"; sid:%v;) `, rb.Port, rb.Domain, 300000+RuleNumber) + "\n"
+	inputrule = inputrule + fmt.Sprintf(`pass tls $HOME_NET any -> any %v (tls.sni; content:"%v"; endswith; sid:%v;)`, rb.Port, rb.Domain, 600000+RuleNumber)
 	updateRGoutput, err := updaterulegroupint(c, rulegroupname, inputrule, token)
 	if err != nil {
 		return nil, err
@@ -70,9 +70,9 @@ func ViewRule(rulegroupname string) (*string, *string, error) {
 	return describeRuleOutput.RuleGroup.RulesSource.RulesString, describeRuleOutput.UpdateToken, nil
 }
 
-func DeleteRule(rulegroupname string, domain string) (*string, error) {
-	if !isDomainValid(domain) {
-		return nil, fmt.Errorf("Domain '%v' is invalid", domain)
+func DeleteRule(rulegroupname string, rb RequestBody) (*string, error) {
+	if !isDomainValid(rb.Domain) {
+		return nil, fmt.Errorf("Domain '%v' is invalid", rb.Domain)
 	}
 
 	c, err := awsAuth()
@@ -89,7 +89,7 @@ func DeleteRule(rulegroupname string, domain string) (*string, error) {
 	var filteredLines []string
 
 	for _, line := range lines {
-		if !strings.Contains(line, domain) {
+		if !isRuleExist(line, rb) {
 			filteredLines = append(filteredLines, line)
 		}
 	}
@@ -101,9 +101,9 @@ func DeleteRule(rulegroupname string, domain string) (*string, error) {
 	return updateRGoutput.UpdateToken, nil
 }
 
-func IsDomainWhitelisted(rulegroupname string, domain string) (bool, error) {
-	if !isDomainValid(domain) {
-		return false, fmt.Errorf("Domain '%v' is invalid", domain)
+func IsDomainWhitelisted(rulegroupname string, rb RequestBody) (bool, error) {
+	if !isDomainValid(rb.Domain) {
+		return false, fmt.Errorf("Domain '%v' is invalid", rb.Domain)
 	}
 
 	rules, _, err := ViewRule(rulegroupname)
@@ -111,5 +111,9 @@ func IsDomainWhitelisted(rulegroupname string, domain string) (bool, error) {
 		return false, err
 	}
 
-	return strings.Contains(*rules, domain), nil
+	return isRuleExist(*rules, rb), nil
+}
+
+func isRuleExist(rules string, rb RequestBody) bool {
+	return strings.Contains(rules, fmt.Sprintf(`any %v (tls.sni; content:"%v";`, rb.Port, rb.Domain))
 }

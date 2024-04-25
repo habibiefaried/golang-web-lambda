@@ -29,7 +29,20 @@ func TestDomainValid(t *testing.T) {
 }
 
 func TestAddRule(t *testing.T) {
-	domainsToBeAdded := []string{"facebook.com", "google.com", "yahoo.com"}
+	domainsToBeAdded := []RequestBody{
+		RequestBody{
+			Domain: "facebook.com",
+			Port:   "80",
+		},
+		RequestBody{
+			Domain: "google.com",
+			Port:   "443",
+		},
+		RequestBody{
+			Domain: "yahoo.com",
+			Port:   "80",
+		},
+	}
 
 	for _, v := range domainsToBeAdded {
 		token, err := AddRule(os.Getenv("RULEGROUPNAME"), v)
@@ -50,7 +63,10 @@ func TestList(t *testing.T) {
 }
 
 func TestDeleteRule(t *testing.T) {
-	token, err := DeleteRule(os.Getenv("RULEGROUPNAME"), "facebook.com")
+	token, err := DeleteRule(os.Getenv("RULEGROUPNAME"), RequestBody{
+		Domain: "facebook.com",
+		Port:   "80",
+	})
 	if err != nil {
 		t.Error(err)
 	}
@@ -58,20 +74,28 @@ func TestDeleteRule(t *testing.T) {
 }
 
 func TestWhitelisted(t *testing.T) {
-	verdicts := map[string]bool{
-		"facebook.com": false,
-		"google.com":   true,
-		"yahoo.com":    true,
-	}
+	verdicts := make(map[RequestBody]bool)
+	verdicts[RequestBody{Domain: "facebook.com", Port: "80"}] = false
+	verdicts[RequestBody{Domain: "google.com", Port: "80"}] = false
+	verdicts[RequestBody{Domain: "google.com", Port: "443"}] = true
+	verdicts[RequestBody{Domain: "yahoo.com", Port: "80"}] = true
+	verdicts[RequestBody{Domain: "yahoo.com", Port: "800"}] = false
+	verdicts[RequestBody{Domain: "yahoo.com", Port: "443"}] = false
 
 	for k, v := range verdicts {
 		ans, err := IsDomainWhitelisted(os.Getenv("RULEGROUPNAME"), k)
 		if err != nil {
 			t.Error(err)
 		}
-		assert.Equal(t, v, ans, "Expected result doesn't match")
+		assert.Equal(t, v, ans, fmt.Sprintf("Expected result doesn't match on %+v", k))
 	}
 
-	_, _ = DeleteRule(os.Getenv("RULEGROUPNAME"), "google.com")
-	_, _ = DeleteRule(os.Getenv("RULEGROUPNAME"), "yahoo.com")
+	_, _ = DeleteRule(os.Getenv("RULEGROUPNAME"), RequestBody{
+		Domain: "google.com",
+		Port:   "443",
+	})
+	_, _ = DeleteRule(os.Getenv("RULEGROUPNAME"), RequestBody{
+		Domain: "yahoo.com",
+		Port:   "80",
+	})
 }
