@@ -7,7 +7,6 @@ import (
 	nf "github.com/aws/aws-sdk-go-v2/service/networkfirewall"
 	"github.com/aws/aws-sdk-go-v2/service/networkfirewall/types"
 	"os"
-	"regexp"
 )
 
 func awsAuth() (*nf.Client, error) {
@@ -22,7 +21,7 @@ func awsAuth() (*nf.Client, error) {
 	return client, nil
 }
 
-func updaterulegroupint(c *nf.Client, rulegroupname string, inputrule string, token *string) (*nf.UpdateRuleGroupOutput, error) {
+func updateRuleGroupInt(c *nf.Client, rulegroupname string, inputrule string, token *string) (*nf.UpdateRuleGroupOutput, error) {
 	IPSets := map[string]types.IPSet{}
 	IPSets["HOME_NET"] = types.IPSet{
 		Definition: []string{os.Getenv("HOME_NET")},
@@ -46,11 +45,21 @@ func updaterulegroupint(c *nf.Client, rulegroupname string, inputrule string, to
 	})
 }
 
-func isRuleExist(rules string, rb RequestBody) bool {
-	if rb.IsTLS {
-		return strings.Contains(rules, fmt.Sprintf(`any %v (tls.sni; content:"%v"; msg:"%v";`, rb.Port, rb.Domain, rb.ID))
-	} else {
-		return strings.Contains(rules, fmt.Sprintf(`any %v (tls.sni; content:"%v"; msg:"%v";`, rb.Port, rb.Domain, rb.ID))
+func ViewRule(rulegroupname string) (*string, *string, error) {
+	c, err := awsAuth()
+	if err != nil {
+		return nil, nil, err
 	}
-	
+
+	describeRuleOutput, err := c.DescribeRuleGroup(context.Background(), &nf.DescribeRuleGroupInput{
+		AnalyzeRuleGroup: false,
+		RuleGroupName:    &rulegroupname,
+		Type:             types.RuleGroupTypeStateful,
+	})
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return describeRuleOutput.RuleGroup.RulesSource.RulesString, describeRuleOutput.UpdateToken, nil
 }
