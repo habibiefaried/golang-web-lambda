@@ -13,6 +13,12 @@ import (
 	"strings"
 )
 
+type WhitelistRequest struct {
+	// Data coming from http/kafka request
+	OldURL nf.RequestBody `json:"oldurl"`
+	NewURL nf.RequestBody `json:"newurl"`
+}
+
 func handleRequest(ctx context.Context, request events.ALBTargetGroupRequest) (events.ALBTargetGroupResponse, error) {
 	log.Printf("Received request: %+v", request)
 
@@ -30,37 +36,8 @@ func handleRequest(ctx context.Context, request events.ALBTargetGroupRequest) (e
 	}
 
 	switch path {
-	case "is-whitelisted":
-		domain := request.QueryStringParameters["domain"]
-		port := request.QueryStringParameters["port"]
-		if domain == "" || port == "" {
-			return events.ALBTargetGroupResponse{
-				StatusCode: http.StatusBadRequest,
-				Body:       "Parameter 'domain' and 'port' are mandatory",
-				Headers:    map[string]string{"Content-Type": "text/plain"},
-			}, nil
-		}
-
-		isWhitelisted, err := nf.IsDomainWhitelisted(NetworkFirewallRuleGroupName, nf.RequestBody{Domain: domain, Port: port})
-		if err != nil {
-			return events.ALBTargetGroupResponse{
-				StatusCode: http.StatusInternalServerError,
-				Body:       err.Error(),
-				Headers:    map[string]string{"Content-Type": "text/plain"},
-			}, nil
-		} else {
-			responseMessage := "yes"
-			if !isWhitelisted {
-				responseMessage = "no"
-			}
-			return events.ALBTargetGroupResponse{
-				StatusCode: http.StatusOK,
-				Body:       responseMessage,
-				Headers:    map[string]string{"Content-Type": "text/plain"},
-			}, nil
-		}
 	case "whitelist":
-		var body nf.RequestBody
+		var body WhitelistRequest
 		err := json.Unmarshal([]byte(request.Body), &body)
 		if err != nil {
 			return events.ALBTargetGroupResponse{
@@ -70,16 +47,7 @@ func handleRequest(ctx context.Context, request events.ALBTargetGroupRequest) (e
 			}, nil
 		}
 
-		err = body.Validate()
-		if err != nil {
-			return events.ALBTargetGroupResponse{
-				StatusCode: http.StatusBadRequest,
-				Body:       err.Error(),
-				Headers:    map[string]string{"Content-Type": "text/plain"},
-			}, nil
-		}
-
-		token, err := nf.AddRule(NetworkFirewallRuleGroupName, body)
+		err = nf.ManageRule(NetworkFirewallRuleGroupName, body.OldURL, body.NewURL)
 		if err != nil {
 			return events.ALBTargetGroupResponse{
 				StatusCode: http.StatusInternalServerError,
@@ -90,7 +58,7 @@ func handleRequest(ctx context.Context, request events.ALBTargetGroupRequest) (e
 
 		return events.ALBTargetGroupResponse{
 			StatusCode: http.StatusOK,
-			Body:       fmt.Sprintf("Added %v:%v to be whitelisted with token ref %v", body.Domain, body.Port, *token),
+			Body:       fmt.Sprintf("Rule is updated!"),
 			Headers:    map[string]string{"Content-Type": "text/plain"},
 		}, nil
 	default:
