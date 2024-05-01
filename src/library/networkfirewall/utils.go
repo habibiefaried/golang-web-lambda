@@ -1,4 +1,4 @@
-package networkfirewall
+package networkfirewallv2
 
 import (
 	"context"
@@ -7,7 +7,6 @@ import (
 	nf "github.com/aws/aws-sdk-go-v2/service/networkfirewall"
 	"github.com/aws/aws-sdk-go-v2/service/networkfirewall/types"
 	"os"
-	"regexp"
 )
 
 func awsAuth() (*nf.Client, error) {
@@ -22,7 +21,7 @@ func awsAuth() (*nf.Client, error) {
 	return client, nil
 }
 
-func updaterulegroupint(c *nf.Client, rulegroupname string, inputrule string, token *string) (*nf.UpdateRuleGroupOutput, error) {
+func updateRuleGroupInt(c *nf.Client, rulegroupname string, inputrule string, token *string) (*nf.UpdateRuleGroupOutput, error) {
 	IPSets := map[string]types.IPSet{}
 	IPSets["HOME_NET"] = types.IPSet{
 		Definition: []string{os.Getenv("HOME_NET")},
@@ -46,12 +45,21 @@ func updaterulegroupint(c *nf.Client, rulegroupname string, inputrule string, to
 	})
 }
 
-// isDomainValid is a function where it validates the string
-func isDomainValid(domain string) bool {
-	// Regex for basic domain validation
-	pattern := `^(?i)(([a-z0-9]|[a-z0-9][a-z0-9\-]*[a-z0-9])\.){1,126}([a-z]|[a-z][a-z\-]*[a-z])$`
+func ViewRule(rulegroupname string) (*string, *string, error) {
+	c, err := awsAuth()
+	if err != nil {
+		return nil, nil, err
+	}
 
-	// Compile the regex
-	re := regexp.MustCompile(pattern)
-	return re.MatchString(domain)
+	describeRuleOutput, err := c.DescribeRuleGroup(context.Background(), &nf.DescribeRuleGroupInput{
+		AnalyzeRuleGroup: false,
+		RuleGroupName:    &rulegroupname,
+		Type:             types.RuleGroupTypeStateful,
+	})
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return describeRuleOutput.RuleGroup.RulesSource.RulesString, describeRuleOutput.UpdateToken, nil
 }

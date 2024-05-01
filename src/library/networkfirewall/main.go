@@ -1,119 +1,91 @@
-package networkfirewall
+package networkfirewallv2
 
 import (
-	"context"
 	"fmt"
-	nf "github.com/aws/aws-sdk-go-v2/service/networkfirewall"
-	"github.com/aws/aws-sdk-go-v2/service/networkfirewall/types"
 	ssm "github.com/habibiefaried/golang-web-lambda/library/ssmparam"
 	"os"
 	"strings"
 )
 
-func AddRule(rulegroupname string, rb RequestBody) (*string, error) {
+func ManageRule(rulegroupname string, oldRule RequestBody, newRule RequestBody) error {
 	counterSSMParam := os.Getenv("COUNTERSSMPATH")
-
-	if !isDomainValid(rb.Domain) {
-		return nil, fmt.Errorf("Domain '%v' is invalid", rb.Domain)
-	}
 
 	c, err := awsAuth()
 	if err != nil {
-		return nil, err
+		return err
+	}
+
+	err = oldRule.Process()
+	if err != nil {
+		return err
+	}
+
+	err = newRule.Process()
+	if err != nil {
+		return err
 	}
 
 	rules, token, err := ViewRule(rulegroupname)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	if isRuleExist(*rules, rb) {
-		return nil, fmt.Errorf("Duplicated entry of domain '%v' and port '%v'", rb.Domain, rb.Port)
-	}
+	inputrule := ""
 
 	RuleNumber, err := ssm.GetCounter(counterSSMParam)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	inputrule := *rules + "\n" + fmt.Sprintf(`alert tls $HOME_NET any -> any %v (tls.sni; content:"%v"; endswith; msg:"Matching TLS allowlisted FQDNs"; sid:%v;) `, rb.Port, rb.Domain, 300000+RuleNumber) + "\n"
-	inputrule = inputrule + fmt.Sprintf(`pass tls $HOME_NET any -> any %v (tls.sni; content:"%v"; endswith; sid:%v;)`, rb.Port, rb.Domain, 600000+RuleNumber)
-	updateRGoutput, err := updaterulegroupint(c, rulegroupname, inputrule, token)
+	if oldRule.IsEmpty() && newRule.IsEmpty() {
+		return fmt.Errorf("Parameter needed is missing\n")
+	} else {
+		if !oldRule.IsEmpty() && !newRule.IsEmpty() { // if both filled
+			if strings.Contains(*rules, oldRule.generatePartSuricataRule()) {
+				inputrule = deleteRule(*rules, oldRule)
+				inputrule = inputrule + newRule.generateWholeSuricataRule(RuleNumber)
+			} else {
+				return fmt.Errorf("Old rule %+v is not found, cannot proceed\n", oldRule)
+			}
+		} else if oldRule.IsEmpty() { // then this is whitelist only
+			if !strings.Contains(*rules, newRule.generatePartSuricataRule()) {
+				inputrule = *rules + newRule.generateWholeSuricataRule(RuleNumber)
+			} else {
+				return fmt.Errorf("New rule %+v already exists\n", newRule)
+			}
+		} else if newRule.IsEmpty() { // then this will delete the old rule
+			if strings.Contains(*rules, oldRule.generatePartSuricataRule()) {
+				inputrule = deleteRule(*rules, oldRule)
+			} else {
+				return fmt.Errorf("Old rule %+v is not found, cannot proceed\n", oldRule)
+			}
+		} else {
+			return fmt.Errorf("To the case which should be impossible\n")
+		}
+	}
+
+	_, err = updateRuleGroupInt(c, rulegroupname, inputrule, token)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	err = ssm.IncreaseCounter(counterSSMParam)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return updateRGoutput.UpdateToken, nil
+	return nil
 }
 
-func ViewRule(rulegroupname string) (*string, *string, error) {
-	c, err := awsAuth()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	describeRuleOutput, err := c.DescribeRuleGroup(context.Background(), &nf.DescribeRuleGroupInput{
-		AnalyzeRuleGroup: false,
-		RuleGroupName:    &rulegroupname,
-		Type:             types.RuleGroupTypeStateful,
-	})
-
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return describeRuleOutput.RuleGroup.RulesSource.RulesString, describeRuleOutput.UpdateToken, nil
-}
-
-func DeleteRule(rulegroupname string, rb RequestBody) (*string, error) {
-	if !isDomainValid(rb.Domain) {
-		return nil, fmt.Errorf("Domain '%v' is invalid", rb.Domain)
-	}
-
-	c, err := awsAuth()
-	if err != nil {
-		return nil, err
-	}
-
-	rules, token, err := ViewRule(rulegroupname)
-	if err != nil {
-		return nil, err
-	}
-
-	lines := strings.Split(*rules, "\n")
+func deleteRule(rules string, rb RequestBody) string {
+	lines := strings.Split(rules, "\n")
 	var filteredLines []string
 
 	for _, line := range lines {
-		if !isRuleExist(line, rb) {
+		if !strings.Contains(line, rb.generatePartSuricataRule()) { // if the rule exists
 			filteredLines = append(filteredLines, line)
 		}
 	}
 
-	updateRGoutput, err := updaterulegroupint(c, rulegroupname, strings.Join(filteredLines, "\n"), token)
-	if err != nil {
-		return nil, err
-	}
-	return updateRGoutput.UpdateToken, nil
-}
-
-func IsDomainWhitelisted(rulegroupname string, rb RequestBody) (bool, error) {
-	if !isDomainValid(rb.Domain) {
-		return false, fmt.Errorf("Domain '%v' is invalid", rb.Domain)
-	}
-
-	rules, _, err := ViewRule(rulegroupname)
-	if err != nil {
-		return false, err
-	}
-
-	return isRuleExist(*rules, rb), nil
-}
-
-func isRuleExist(rules string, rb RequestBody) bool {
-	return strings.Contains(rules, fmt.Sprintf(`any %v (tls.sni; content:"%v";`, rb.Port, rb.Domain))
+	return strings.Join(filteredLines, "\n")
 }
