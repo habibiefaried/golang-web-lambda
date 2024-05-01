@@ -38,29 +38,29 @@ func ManageRule(rulegroupname string, oldRule RequestBody, newRule RequestBody) 
 	}
 
 	if oldRule.IsEmpty() && newRule.IsEmpty() {
-		return fmt.Errorf("Parameter needed is missing")
+		return fmt.Errorf("Parameter needed is missing\n")
 	} else {
 		if !oldRule.IsEmpty() && !newRule.IsEmpty() { // if both filled
 			if strings.Contains(*rules, oldRule.generatePartSuricataRule()) {
 				inputrule = deleteRule(*rules, oldRule)
 				inputrule = inputrule + newRule.generateWholeSuricataRule(RuleNumber)
 			} else {
-				return fmt.Errorf("Old rule %+v is not found, cannot proceed", oldRule)
+				return fmt.Errorf("Old rule %+v is not found, cannot proceed\n", oldRule)
 			}
 		} else if oldRule.IsEmpty() { // then this is whitelist only
 			if !strings.Contains(*rules, newRule.generatePartSuricataRule()) {
 				inputrule = *rules + newRule.generateWholeSuricataRule(RuleNumber)
 			} else {
-				return fmt.Errorf("New rule %+v already exists", newRule)
+				return fmt.Errorf("New rule %+v already exists\n", newRule)
 			}
 		} else if newRule.IsEmpty() { // then this will delete the old rule
 			if strings.Contains(*rules, oldRule.generatePartSuricataRule()) {
 				inputrule = deleteRule(*rules, oldRule)
 			} else {
-				return fmt.Errorf("Old rule %+v is not found, cannot proceed", oldRule)
+				return fmt.Errorf("Old rule %+v is not found, cannot proceed\n", oldRule)
 			}
 		} else {
-			return fmt.Errorf("To the case which should be impossible")
+			return fmt.Errorf("To the case which should be impossible\n")
 		}
 	}
 

@@ -23,9 +23,13 @@ func (r *RequestBody) Process() error {
 		return nil
 	}
 
-	urlParsed, err := url.Parse(r.URL)
+	urlParsed, err := url.ParseRequestURI(r.URL)
 	if err != nil {
 		return fmt.Errorf("Error parsing URL: %v", err)
+	}
+
+	if urlParsed.Hostname() == "" {
+		return fmt.Errorf("Not valid URL: %v\n", r.URL)
 	}
 
 	// Check the scheme to determine if TLS is used

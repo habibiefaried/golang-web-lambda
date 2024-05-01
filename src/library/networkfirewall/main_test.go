@@ -1,6 +1,7 @@
 package networkfirewallv2
 
 import (
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
@@ -36,7 +37,7 @@ func TestManageRule1(t *testing.T) {
 		URL: "https://example.com/subpath",
 	}
 	err := ManageRule(os.Getenv("RULEGROUPNAME"), oldRb, newRb)
-	assert.EqualError(t, err, "Old rule {ID:1 URL:https://example.org/subpath IsTLS:true Domain:example.org Port:443} is not found, cannot proceed")
+	assert.EqualError(t, err, "Old rule {ID:1 URL:https://example.org/subpath IsTLS:true Domain:example.org Port:443} is not found, cannot proceed\n")
 }
 
 // TestManageRule2 to test by adding https://google.com , update to http://google.org/a and delete it
@@ -113,7 +114,7 @@ func TestManageRule3(t *testing.T) {
 	}
 	newRb = RequestBody{}
 	err = ManageRule(os.Getenv("RULEGROUPNAME"), oldRb, newRb)
-	assert.EqualError(t, err, "Old rule {ID:5 URL:https://google.com:9090/exactpath IsTLS:true Domain:google.com Port:9090} is not found, cannot proceed")
+	assert.EqualError(t, err, "Old rule {ID:5 URL:https://google.com:9090/exactpath IsTLS:true Domain:google.com Port:9090} is not found, cannot proceed\n")
 
 	// Update rule with wrong merchant ID
 	oldRb = RequestBody{
@@ -125,7 +126,7 @@ func TestManageRule3(t *testing.T) {
 		URL: "http://google.com:1234/test",
 	}
 	err = ManageRule(os.Getenv("RULEGROUPNAME"), oldRb, newRb)
-	assert.EqualError(t, err, "Old rule {ID:xx-566 URL:https://google.com:9090/exactpath IsTLS:true Domain:google.com Port:9090} is not found, cannot proceed")
+	assert.EqualError(t, err, "Old rule {ID:xx-566 URL:https://google.com:9090/exactpath IsTLS:true Domain:google.com Port:9090} is not found, cannot proceed\n")
 
 	// Delete old Rule
 	oldRb = RequestBody{
@@ -148,4 +149,35 @@ func TestManageRule3(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+}
+
+func TestManageRule4(t *testing.T) {
+	domain := "https:"
+	oldRb := RequestBody{
+		ID:  "1",
+		URL: domain,
+	}
+	err := ManageRule(os.Getenv("RULEGROUPNAME"), oldRb, RequestBody{})
+	assert.EqualError(t, err, fmt.Sprintf("Not valid URL: %v\n", domain))
+}
+
+// TestManageRule5 will return "parameter missing" because of improper input of old rule
+// and empty input for new rule param
+func TestManageRule5(t *testing.T) {
+	oldRb := RequestBody{
+		ID:  "",
+		URL: "https://example.org/a",
+	}
+	err := ManageRule(os.Getenv("RULEGROUPNAME"), oldRb, RequestBody{})
+	assert.EqualError(t, err, "Parameter needed is missing\n")
+}
+
+// TestManageRule6 will return error try to delete non existent rule only
+func TestManageRule6(t *testing.T) {
+	oldRb := RequestBody{
+		ID:  "123",
+		URL: "https://example.org",
+	}
+	err := ManageRule(os.Getenv("RULEGROUPNAME"), oldRb, RequestBody{})
+	assert.EqualError(t, err, "Old rule {ID:123 URL:https://example.org IsTLS:true Domain:example.org Port:443} is not found, cannot proceed\n")
 }
