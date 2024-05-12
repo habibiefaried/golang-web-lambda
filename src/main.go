@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -28,6 +29,17 @@ func Handler(ctx context.Context, event json.RawMessage) (interface{}, error) {
 			return handleEventBridgeEvent(ebEvent)
 		}
 	}
+
+	// DEBUGGING purpose
+	// To format the JSON in a pretty way, you can use json.MarshalIndent
+	var indentedJSON bytes.Buffer
+	err := json.Indent(&indentedJSON, event, "", "    ")
+	if err != nil {
+		return nil, fmt.Errorf("Error indenting JSON: %v", err)
+	}
+
+	// Print the indented JSON
+	fmt.Println(indentedJSON.String())
 
 	// Fallback if the event does not match expected types
 	return nil, fmt.Errorf("unrecognized event type")
