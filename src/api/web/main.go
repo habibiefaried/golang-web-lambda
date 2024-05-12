@@ -1,11 +1,10 @@
-package apilambda
+package apiweb
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
-	"github.com/aws/aws-lambda-go/lambda"
 	nf "github.com/habibiefaried/golang-web-lambda/library/networkfirewall"
 	"log"
 	"net/http"
@@ -13,7 +12,7 @@ import (
 	"strings"
 )
 
-func handleRequest(ctx context.Context, request events.ALBTargetGroupRequest) (events.ALBTargetGroupResponse, error) {
+func HandleRequestWeb(ctx context.Context, request events.ALBTargetGroupRequest) (events.ALBTargetGroupResponse, error) {
 	log.Printf("Received request: %+v", request)
 
 	// Normalize path
@@ -40,15 +39,15 @@ func handleRequest(ctx context.Context, request events.ALBTargetGroupRequest) (e
 				Headers:    map[string]string{"Content-Type": "text/plain"},
 			}, nil
 		}
-
+		log.Printf("Log %+v", body)
 		err = nf.ManageRule(
 			NetworkFirewallRuleGroupName,
 			nf.RequestBody{
-				ID:  body.MerchantID,
+				ID:  body.ID,
 				URL: body.OldURL,
 			},
 			nf.RequestBody{
-				ID:  body.MerchantID,
+				ID:  body.ID,
 				URL: body.NewURL,
 			},
 		)
@@ -72,8 +71,4 @@ func handleRequest(ctx context.Context, request events.ALBTargetGroupRequest) (e
 			Headers:    map[string]string{"Content-Type": "text/plain"},
 		}, nil
 	}
-}
-
-func Run() {
-	lambda.Start(handleRequest)
 }
