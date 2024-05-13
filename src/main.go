@@ -1,75 +1,55 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
-	nf "github.com/habibiefaried/golang-web-lambda/library/networkfirewall"
-	"log"
-	"net/http"
-	"os"
-	"strings"
+	apiweb "github.com/habibiefaried/golang-web-lambda/api/web"
 )
 
-type WhitelistRequest struct {
-	// Data coming from http/kafka request
-	OldURL nf.RequestBody `json:"oldurl"`
-	NewURL nf.RequestBody `json:"newurl"`
+// Handler is the Lambda function handler
+func Handler(ctx context.Context, event json.RawMessage) (interface{}, error) {
+	// Attempt to unmarshal the event as an ALB event
+	var albEvent events.ALBTargetGroupRequest
+	if err := json.Unmarshal(event, &albEvent); err == nil {
+		if albEvent.HTTPMethod != "" {
+			// Handle ALB event
+			return apiweb.HandleRequestWeb(ctx, albEvent)
+		}
+	}
+
+	// Attempt to unmarshal the event as an EventBridge event
+	var ebEvent events.CloudWatchEvent
+	if err := json.Unmarshal(event, &ebEvent); err == nil {
+		if ebEvent.Source != "" {
+			// Handle EventBridge event
+			return handleEventBridgeEvent(ebEvent)
+		}
+	}
+
+	// DEBUGGING purpose
+	// To format the JSON in a pretty way, you can use json.MarshalIndent
+	var indentedJSON bytes.Buffer
+	err := json.Indent(&indentedJSON, event, "", "    ")
+	if err != nil {
+		return nil, fmt.Errorf("Error indenting JSON: %v", err)
+	}
+
+	// Print the indented JSON
+	fmt.Println(indentedJSON.String())
+
+	// Fallback if the event does not match expected types
+	return nil, fmt.Errorf("unrecognized event type")
 }
 
-func handleRequest(ctx context.Context, request events.ALBTargetGroupRequest) (events.ALBTargetGroupResponse, error) {
-	log.Printf("Received request: %+v", request)
-
-	// Normalize path
-	NetworkFirewallRuleGroupName := os.Getenv("RULEGROUPNAME")
-	path := strings.Trim(request.Path, "/ ")
-
-	// Default response for "/"
-	if path == "" {
-		return events.ALBTargetGroupResponse{
-			StatusCode: http.StatusOK,
-			Body:       "Hello World!",
-			Headers:    map[string]string{"Content-Type": "text/plain"},
-		}, nil
-	}
-
-	switch path {
-	case "whitelist":
-		var body WhitelistRequest
-		err := json.Unmarshal([]byte(request.Body), &body)
-		if err != nil {
-			return events.ALBTargetGroupResponse{
-				StatusCode: http.StatusBadRequest,
-				Body:       "Invalid JSON in request body",
-				Headers:    map[string]string{"Content-Type": "text/plain"},
-			}, nil
-		}
-
-		err = nf.ManageRule(NetworkFirewallRuleGroupName, body.OldURL, body.NewURL)
-		if err != nil {
-			return events.ALBTargetGroupResponse{
-				StatusCode: http.StatusInternalServerError,
-				Body:       err.Error(),
-				Headers:    map[string]string{"Content-Type": "text/plain"},
-			}, nil
-		}
-
-		return events.ALBTargetGroupResponse{
-			StatusCode: http.StatusOK,
-			Body:       fmt.Sprintf("Rule is updated!"),
-			Headers:    map[string]string{"Content-Type": "text/plain"},
-		}, nil
-	default:
-		return events.ALBTargetGroupResponse{
-			StatusCode: http.StatusNotFound,
-			Body:       "Not Found",
-			Headers:    map[string]string{"Content-Type": "text/plain"},
-		}, nil
-	}
+func handleEventBridgeEvent(event events.CloudWatchEvent) (string, error) {
+	// Define processing logic for EventBridge events here
+	return "Hello from EventBridge", nil
 }
 
 func main() {
-	lambda.Start(handleRequest)
+	lambda.Start(Handler)
 }
