@@ -73,12 +73,18 @@ func (r *RequestBody) generatePartSuricataRule() string {
 // generateWholeSuricataRule is a function to generate whole rule to whitelist new domain
 func (r *RequestBody) generateWholeSuricataRule(RuleNumber int) string {
 	ret := ""
-	if r.IsTLS {
-		ret = "\n" + fmt.Sprintf(`alert tls $HOME_NET any -> any %v (tls.sni; content:"%v"; endswith; msg:"ID %v"; sid:%v;) `, r.Port, r.Domain, r.ID, 300000+RuleNumber) + "\n"
-		ret = ret + fmt.Sprintf(`pass tls $HOME_NET any -> any %v (tls.sni; content:"%v"; endswith; msg:"ID %v"; sid:%v;)`, r.Port, r.Domain, r.ID, 600000+RuleNumber)
-	} else {
-		ret = "\n" + fmt.Sprintf(`alert http $HOME_NET any -> any %v (http.host; content:"%v"; endswith; msg:"ID %v"; sid:%v;) `, r.Port, r.Domain, r.ID, 300000+RuleNumber) + "\n"
-		ret = ret + fmt.Sprintf(`pass http $HOME_NET any -> any %v (http.host; content:"%v"; endswith; msg:"ID %v"; sid:%v;)`, r.Port, r.Domain, r.ID, 600000+RuleNumber)
+	if r.IsIPAddr {
+		ret = "\n" + fmt.Sprintf(`alert tcp $HOME_NET any -> %v %v (msg:"ID %v"; sid:%v;) `, r.Domain, r.Port, r.ID, 300000+RuleNumber) + "\n"
+		ret = ret + fmt.Sprintf(`pass tcp $HOME_NET any -> %v %v (msg:"ID %v"; sid:%v;)`, r.Domain, r.Port, r.ID, 600000+RuleNumber)
+	} else { // Domain
+		if r.IsTLS {
+			ret = "\n" + fmt.Sprintf(`alert tls $HOME_NET any -> any %v (tls.sni; content:"%v"; endswith; msg:"ID %v"; sid:%v;) `, r.Port, r.Domain, r.ID, 300000+RuleNumber) + "\n"
+			ret = ret + fmt.Sprintf(`pass tls $HOME_NET any -> any %v (tls.sni; content:"%v"; endswith; msg:"ID %v"; sid:%v;)`, r.Port, r.Domain, r.ID, 600000+RuleNumber)
+		} else {
+			ret = "\n" + fmt.Sprintf(`alert http $HOME_NET any -> any %v (http.host; content:"%v"; endswith; msg:"ID %v"; sid:%v;) `, r.Port, r.Domain, r.ID, 300000+RuleNumber) + "\n"
+			ret = ret + fmt.Sprintf(`pass http $HOME_NET any -> any %v (http.host; content:"%v"; endswith; msg:"ID %v"; sid:%v;)`, r.Port, r.Domain, r.ID, 600000+RuleNumber)
+		}
 	}
+
 	return ret
 }
