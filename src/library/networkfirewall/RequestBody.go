@@ -12,9 +12,10 @@ type RequestBody struct {
 	URL string `json:"url"`
 
 	// After process
-	IsTLS  bool
-	Domain string
-	Port   string
+	IsTLS    bool
+	Domain   string
+	Port     string
+	IsIPAddr bool
 }
 
 // Process parse the URL into IsTLS, domain and port
@@ -28,7 +29,11 @@ func (r *RequestBody) Process() error {
 		return fmt.Errorf("Error parsing URL: %v", err)
 	}
 
-	if urlParsed.Hostname() == "" {
+	if IsValidDomain(urlParsed.Hostname()) {
+		r.IsIPAddr = false
+	} else if IsValidIP(urlParsed.Hostname()) {
+		r.IsIPAddr = true
+	} else {
 		return fmt.Errorf("Not valid URL: %v\n", r.URL)
 	}
 
