@@ -26,6 +26,3 @@ curl "http://my-alb-1404328830.ap-northeast-1.elb.amazonaws.com/whitelist" -d '{
 ```
 curl "http://my-alb-1404328830.ap-northeast-1.elb.amazonaws.com/whitelist" -d '{"id": "1", "oldurl": "https://randomzied.com"}' -H "Content-Type: application/json"
 ```
-
-TODO
-1. Missed testcase, adding 3 new rule in the same ID resulting rejection. it should be able to receive all of them

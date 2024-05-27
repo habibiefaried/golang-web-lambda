@@ -64,10 +64,18 @@ func (r *RequestBody) IsEmpty() bool {
 	return r.ID == "" || r.URL == ""
 }
 
-// generatePartSuricataRule is a function to generate Suricata Rule string for msg:ID
-// this is used for searching purpose
+// generatePartSuricataRule is a function to generate Suricata Rule string after $HOME_NET and before sid
+// this is used for verification and searching purpose
 func (r *RequestBody) generatePartSuricataRule() string {
-	return fmt.Sprintf(`msg:"ID %v";`, r.ID)
+	if r.IsIPAddr {
+		return fmt.Sprintf(`$HOME_NET any -> %v %v (msg:"ID %v";`, r.Domain, r.Port, r.ID)
+	} else {
+		if r.IsTLS {
+			return fmt.Sprintf(`$HOME_NET any -> any %v (tls.sni; content:"%v"; endswith; msg:"ID %v";`, r.Port, r.Domain, r.ID)
+		} else {
+			return fmt.Sprintf(`$HOME_NET any -> any %v (http.host; content:"%v"; endswith; msg:"ID %v";`, r.Port, r.Domain, r.ID)
+		}
+	}
 }
 
 // generateWholeSuricataRule is a function to generate whole rule to whitelist new domain

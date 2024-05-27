@@ -2,9 +2,10 @@ package networkfirewallv2
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestProcessData(t *testing.T) {
@@ -294,6 +295,53 @@ func TestManageRule9(t *testing.T) {
 	oldRb = RequestBody{
 		ID:  "IP-2",
 		URL: "https://scam.xyz/test1/path",
+	}
+	newRb = RequestBody{}
+	err = ManageRule(os.Getenv("RULEGROUPNAME"), oldRb, newRb)
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+// TestManageRule10 to test by adding https://facebook.com:9210/sub and http://1.1.1.1:1234/a/b , delete those again
+func TestManageRule10(t *testing.T) {
+	// Add rule
+	oldRb := RequestBody{}
+	newRb := RequestBody{
+		ID:  "10",
+		URL: "https://facebook.com:9210/sub",
+	}
+
+	err := ManageRule(os.Getenv("RULEGROUPNAME"), oldRb, newRb)
+	if err != nil {
+		t.Error(err)
+	}
+
+	newRb = RequestBody{
+		ID:  "10",
+		URL: "http://1.1.1.1:1234/a/b",
+	}
+
+	err = ManageRule(os.Getenv("RULEGROUPNAME"), oldRb, newRb)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Delete old Rule
+	oldRb = RequestBody{
+		ID:  "10",
+		URL: "https://facebook.com:9210/sub",
+	}
+	newRb = RequestBody{}
+	err = ManageRule(os.Getenv("RULEGROUPNAME"), oldRb, newRb)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Delete old Rule
+	oldRb = RequestBody{
+		ID:  "10",
+		URL: "http://1.1.1.1:1234/a/b",
 	}
 	newRb = RequestBody{}
 	err = ManageRule(os.Getenv("RULEGROUPNAME"), oldRb, newRb)
