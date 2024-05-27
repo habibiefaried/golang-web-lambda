@@ -12,9 +12,10 @@ type RequestBody struct {
 	URL string `json:"url"`
 
 	// After process
-	IsTLS  bool
-	Domain string
-	Port   string
+	IsTLS    bool
+	Domain   string
+	Port     string
+	IsIPAddr bool
 }
 
 // Process parse the URL into IsTLS, domain and port
@@ -28,7 +29,11 @@ func (r *RequestBody) Process() error {
 		return fmt.Errorf("Error parsing URL: %v", err)
 	}
 
-	if urlParsed.Hostname() == "" {
+	if IsValidDomain(urlParsed.Hostname()) {
+		r.IsIPAddr = false
+	} else if IsValidIP(urlParsed.Hostname()) {
+		r.IsIPAddr = true
+	} else {
 		return fmt.Errorf("Not valid URL: %v\n", r.URL)
 	}
 
@@ -60,24 +65,34 @@ func (r *RequestBody) IsEmpty() bool {
 }
 
 // generatePartSuricataRule is a function to generate Suricata Rule string after $HOME_NET and before sid
-// this is used for verification
+// this is used for verification and searching purpose
 func (r *RequestBody) generatePartSuricataRule() string {
-	if r.IsTLS {
-		return fmt.Sprintf(`$HOME_NET any -> any %v (tls.sni; content:"%v"; endswith; msg:"ID %v";`, r.Port, r.Domain, r.ID)
+	if r.IsIPAddr {
+		return fmt.Sprintf(`$HOME_NET any -> %v %v (msg:"ID %v";`, r.Domain, r.Port, r.ID)
 	} else {
-		return fmt.Sprintf(`$HOME_NET any -> any %v (http.host; content:"%v"; endswith; msg:"ID %v";`, r.Port, r.Domain, r.ID)
+		if r.IsTLS {
+			return fmt.Sprintf(`$HOME_NET any -> any %v (tls.sni; content:"%v"; endswith; msg:"ID %v";`, r.Port, r.Domain, r.ID)
+		} else {
+			return fmt.Sprintf(`$HOME_NET any -> any %v (http.host; content:"%v"; endswith; msg:"ID %v";`, r.Port, r.Domain, r.ID)
+		}
 	}
 }
 
 // generateWholeSuricataRule is a function to generate whole rule to whitelist new domain
 func (r *RequestBody) generateWholeSuricataRule(RuleNumber int) string {
 	ret := ""
-	if r.IsTLS {
-		ret = "\n" + fmt.Sprintf(`alert tls $HOME_NET any -> any %v (tls.sni; content:"%v"; endswith; msg:"ID %v"; sid:%v;) `, r.Port, r.Domain, r.ID, 300000+RuleNumber) + "\n"
-		ret = ret + fmt.Sprintf(`pass tls $HOME_NET any -> any %v (tls.sni; content:"%v"; endswith; msg:"ID %v"; sid:%v;)`, r.Port, r.Domain, r.ID, 600000+RuleNumber)
-	} else {
-		ret = "\n" + fmt.Sprintf(`alert http $HOME_NET any -> any %v (http.host; content:"%v"; endswith; msg:"ID %v"; sid:%v;) `, r.Port, r.Domain, r.ID, 300000+RuleNumber) + "\n"
-		ret = ret + fmt.Sprintf(`pass http $HOME_NET any -> any %v (http.host; content:"%v"; endswith; msg:"ID %v"; sid:%v;)`, r.Port, r.Domain, r.ID, 600000+RuleNumber)
+	if r.IsIPAddr {
+		ret = "\n" + fmt.Sprintf(`alert tcp $HOME_NET any -> %v %v (msg:"ID %v"; sid:%v;) `, r.Domain, r.Port, r.ID, 300000+RuleNumber) + "\n"
+		ret = ret + fmt.Sprintf(`pass tcp $HOME_NET any -> %v %v (msg:"ID %v"; sid:%v;)`, r.Domain, r.Port, r.ID, 600000+RuleNumber)
+	} else { // Domain
+		if r.IsTLS {
+			ret = "\n" + fmt.Sprintf(`alert tls $HOME_NET any -> any %v (tls.sni; content:"%v"; endswith; msg:"ID %v"; sid:%v;) `, r.Port, r.Domain, r.ID, 300000+RuleNumber) + "\n"
+			ret = ret + fmt.Sprintf(`pass tls $HOME_NET any -> any %v (tls.sni; content:"%v"; endswith; msg:"ID %v"; sid:%v;)`, r.Port, r.Domain, r.ID, 600000+RuleNumber)
+		} else {
+			ret = "\n" + fmt.Sprintf(`alert http $HOME_NET any -> any %v (http.host; content:"%v"; endswith; msg:"ID %v"; sid:%v;) `, r.Port, r.Domain, r.ID, 300000+RuleNumber) + "\n"
+			ret = ret + fmt.Sprintf(`pass http $HOME_NET any -> any %v (http.host; content:"%v"; endswith; msg:"ID %v"; sid:%v;)`, r.Port, r.Domain, r.ID, 600000+RuleNumber)
+		}
 	}
+
 	return ret
 }

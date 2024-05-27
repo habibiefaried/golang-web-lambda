@@ -6,7 +6,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	nf "github.com/aws/aws-sdk-go-v2/service/networkfirewall"
 	"github.com/aws/aws-sdk-go-v2/service/networkfirewall/types"
+	"net"
 	"os"
+	"regexp"
 )
 
 func awsAuth() (*nf.Client, error) {
@@ -62,4 +64,16 @@ func ViewRule(rulegroupname string) (*string, *string, error) {
 	}
 
 	return describeRuleOutput.RuleGroup.RulesSource.RulesString, describeRuleOutput.UpdateToken, nil
+}
+
+// IsValidIP Check if a string is a valid IP address
+func IsValidIP(ip string) bool {
+	return net.ParseIP(ip) != nil
+}
+
+// IsValidDomain Check if a string is a valid domain name
+func IsValidDomain(domain string) bool {
+	// Regular expression to match a valid domain name
+	var domainRegex = regexp.MustCompile(`^([a-zA-Z0-9-_]+\.)*[a-zA-Z0-9-]+(\.[a-zA-Z]{2,})+$`)
+	return domainRegex.MatchString(domain)
 }
